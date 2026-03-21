@@ -7,9 +7,9 @@ import java.util.Optional;
 
 public interface VoteRepository {
     List<Vote> findByOptionId(String optionId);
-    List<Vote> findByUserAndPoll(String userId, String pollId); // votes d'un user sur un sondage
+    List<Vote> findByUserAndPoll(String userId, String pollId); // users votes on a poll
     Optional<Vote> findByUserAndOption(String userId, String optionId);
-    int countByOptionId(String optionId);                // total votes sur une option
-    void save(Vote vote);                                // insert ou update (vote modifiable)
-    void deleteByUserAndPoll(String userId, String pollId); // retrait du vote
+    int countByOptionId(String optionId);                // total votes on an option
+    void save(Vote vote);                                // insert or update (modifiable vote)
+    void deleteByUserAndPoll(String userId, String pollId); // remove a vote
 }
