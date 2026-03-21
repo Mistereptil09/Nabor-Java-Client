@@ -2,7 +2,7 @@
 -- UTILISATEURS
 -- ============================================================
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
                        id                       TEXT    PRIMARY KEY,
                        first_name               TEXT    NOT NULL,
                        last_name                TEXT    NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE users (
                        deleted_at               INTEGER
 );
 
-CREATE TABLE user_sessions (
+CREATE TABLE IF NOT EXISTS user_sessions (
                                id                 TEXT    PRIMARY KEY,
                                user_id            TEXT    NOT NULL REFERENCES users(id),
                                refresh_token_hash TEXT    NOT NULL UNIQUE,
@@ -40,7 +40,7 @@ CREATE TABLE user_sessions (
                                revoked_at         INTEGER
 );
 
-CREATE TABLE user_notification_preferences (
+CREATE TABLE IF NOT EXISTS user_notification_preferences (
                                                user_id            TEXT    PRIMARY KEY REFERENCES users(id),
                                                notif_new_follower INTEGER NOT NULL DEFAULT 1,
                                                notif_new_listing  INTEGER NOT NULL DEFAULT 1,
@@ -55,14 +55,14 @@ CREATE TABLE user_notification_preferences (
 -- RÉSEAU SOCIAL
 -- ============================================================
 
-CREATE TABLE follow (
+CREATE TABLE IF NOT EXISTS follow (
                         follower_id TEXT    NOT NULL REFERENCES users(id),
                         followed_id TEXT    NOT NULL REFERENCES users(id),
                         followed_at INTEGER NOT NULL,
                         PRIMARY KEY (follower_id, followed_id)
 );
 
-CREATE TABLE friendships (
+CREATE TABLE IF NOT EXISTS friendships (
                              id            TEXT    PRIMARY KEY,
                              user1_id      TEXT    NOT NULL REFERENCES users(id),
                              user2_id      TEXT    NOT NULL REFERENCES users(id),
@@ -71,14 +71,14 @@ CREATE TABLE friendships (
                              group_id      TEXT    REFERENCES chat_groups(id)
 );
 
-CREATE TABLE user_blocks (
+CREATE TABLE IF NOT EXISTS user_blocks (
                              blocker_id TEXT    NOT NULL REFERENCES users(id),
                              blocked_id TEXT    NOT NULL REFERENCES users(id),
                              blocked_at INTEGER NOT NULL,
                              PRIMARY KEY (blocker_id, blocked_id)
 );
 
-CREATE TABLE user_swipes (
+CREATE TABLE IF NOT EXISTS user_swipes (
                              swiper_id TEXT    NOT NULL REFERENCES users(id),
                              swiped_id TEXT    NOT NULL REFERENCES users(id),
                              direction TEXT    NOT NULL CHECK (direction IN ('like','dislike')),
@@ -90,7 +90,7 @@ CREATE TABLE user_swipes (
 -- MESSAGERIE
 -- ============================================================
 
-CREATE TABLE chat_groups (
+CREATE TABLE IF NOT EXISTS chat_groups (
                              id          TEXT    PRIMARY KEY,
                              name        TEXT,
                              description TEXT,
@@ -102,7 +102,7 @@ CREATE TABLE chat_groups (
                              deleted_at  INTEGER
 );
 
-CREATE TABLE users_in_group (
+CREATE TABLE IF NOT EXISTS users_in_group (
                                 user_id       TEXT    NOT NULL REFERENCES users(id),
                                 group_id      TEXT    NOT NULL REFERENCES chat_groups(id),
                                 role_in_group TEXT    NOT NULL DEFAULT 'message'
@@ -115,7 +115,7 @@ CREATE TABLE users_in_group (
                                 PRIMARY KEY (user_id, group_id)
 );
 
-CREATE TABLE message_metadata (
+CREATE TABLE IF NOT EXISTS message_metadata (
                                   id                TEXT    PRIMARY KEY,
                                   mongo_message_id  TEXT    NOT NULL,
                                   group_id          TEXT    NOT NULL REFERENCES chat_groups(id),
@@ -127,7 +127,7 @@ CREATE TABLE message_metadata (
                                   parent_message_id TEXT    REFERENCES message_metadata(id)
 );
 
-CREATE TABLE message_read_receipts (
+CREATE TABLE IF NOT EXISTS message_read_receipts (
                                        message_id TEXT    NOT NULL REFERENCES message_metadata(id),
                                        user_id    TEXT    NOT NULL REFERENCES users(id),
                                        read_at    INTEGER NOT NULL,
@@ -138,7 +138,7 @@ CREATE TABLE message_read_receipts (
 -- ANNONCES
 -- ============================================================
 
-CREATE TABLE listing_category (
+CREATE TABLE IF NOT EXISTS listing_category (
                                   id              INTEGER PRIMARY KEY AUTOINCREMENT,
                                   parent_category INTEGER REFERENCES listing_category(id),
                                   category_name   TEXT    NOT NULL,
@@ -146,7 +146,7 @@ CREATE TABLE listing_category (
                                   updated_at      INTEGER
 );
 
-CREATE TABLE listings (
+CREATE TABLE IF NOT EXISTS listings (
                           id                TEXT    PRIMARY KEY,
                           creator_id        TEXT    NOT NULL REFERENCES users(id),
                           title             TEXT    NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE listings (
                           deleted_at        INTEGER
 );
 
-CREATE TABLE listing_transactions (
+CREATE TABLE IF NOT EXISTS listing_transactions (
                                       id                    TEXT    PRIMARY KEY,
                                       listing_id            TEXT    NOT NULL REFERENCES listings(id),
                                       provider_id           TEXT    NOT NULL REFERENCES users(id),
@@ -184,7 +184,7 @@ CREATE TABLE listing_transactions (
                                       cancelled_at          INTEGER
 );
 
-CREATE TABLE listing_reports (
+CREATE TABLE IF NOT EXISTS listing_reports (
                                  id          TEXT    PRIMARY KEY,
                                  listing_id  TEXT    NOT NULL REFERENCES listings(id),
                                  reporter_id TEXT    NOT NULL REFERENCES users(id),
@@ -193,7 +193,7 @@ CREATE TABLE listing_reports (
                                  resolved_at INTEGER
 );
 
-CREATE TABLE listing_moderation_actions (
+CREATE TABLE IF NOT EXISTS listing_moderation_actions (
                                             id           TEXT    PRIMARY KEY,
                                             listing_id   TEXT    NOT NULL REFERENCES listings(id),
                                             moderator_id TEXT    NOT NULL REFERENCES users(id),
@@ -206,7 +206,7 @@ CREATE TABLE listing_moderation_actions (
 -- ÉVÉNEMENTS
 -- ============================================================
 
-CREATE TABLE evenements_category (
+CREATE TABLE IF NOT EXISTS evenements_category (
                                      id              INTEGER PRIMARY KEY AUTOINCREMENT,
                                      parent_category INTEGER REFERENCES evenements_category(id),
                                      category_name   TEXT    NOT NULL,
@@ -214,7 +214,7 @@ CREATE TABLE evenements_category (
                                      updated_at      INTEGER
 );
 
-CREATE TABLE evenements (
+CREATE TABLE IF NOT EXISTS evenements (
                             id                    TEXT    PRIMARY KEY,
                             creator_id            TEXT    NOT NULL REFERENCES users(id),
                             neighbourhood_id      TEXT,
@@ -238,7 +238,7 @@ CREATE TABLE evenements (
                             deleted_at            INTEGER
 );
 
-CREATE TABLE event_participants (
+CREATE TABLE IF NOT EXISTS event_participants (
                                     user_id               TEXT    NOT NULL REFERENCES users(id),
                                     event_id              TEXT    NOT NULL REFERENCES evenements(id),
                                     status                TEXT    NOT NULL DEFAULT 'waitlisted'
@@ -258,7 +258,7 @@ CREATE TABLE event_participants (
                                     PRIMARY KEY (user_id, event_id)
 );
 
-CREATE TABLE event_swipes (
+CREATE TABLE IF NOT EXISTS event_swipes (
                               user_id   TEXT    NOT NULL REFERENCES users(id),
                               event_id  TEXT    NOT NULL REFERENCES evenements(id),
                               direction TEXT    NOT NULL CHECK (direction IN ('like','dislike')),
@@ -266,7 +266,7 @@ CREATE TABLE event_swipes (
                               PRIMARY KEY (user_id, event_id)
 );
 
-CREATE TABLE event_reports (
+CREATE TABLE IF NOT EXISTS event_reports (
                                id          TEXT    PRIMARY KEY,
                                event_id    TEXT    NOT NULL REFERENCES evenements(id),
                                reporter_id TEXT    NOT NULL REFERENCES users(id),
@@ -275,7 +275,7 @@ CREATE TABLE event_reports (
                                resolved_at INTEGER
 );
 
-CREATE TABLE event_moderation_actions (
+CREATE TABLE IF NOT EXISTS event_moderation_actions (
                                           id           TEXT    PRIMARY KEY,
                                           event_id     TEXT    NOT NULL REFERENCES evenements(id),
                                           moderator_id TEXT    NOT NULL REFERENCES users(id),
@@ -288,7 +288,7 @@ CREATE TABLE event_moderation_actions (
 -- SONDAGES
 -- ============================================================
 
-CREATE TABLE polls (
+CREATE TABLE IF NOT EXISTS polls (
                        id               TEXT    PRIMARY KEY,
                        title            TEXT    NOT NULL,
                        description      TEXT,
@@ -306,14 +306,14 @@ CREATE TABLE polls (
                        deleted_at       INTEGER
 );
 
-CREATE TABLE poll_options (
+CREATE TABLE IF NOT EXISTS poll_options (
                               id         TEXT    PRIMARY KEY,
                               poll_id    TEXT    NOT NULL REFERENCES polls(id),
                               label      TEXT    NOT NULL,
                               created_at INTEGER NOT NULL
 );
 
-CREATE TABLE votes (
+CREATE TABLE IF NOT EXISTS votes (
                        user_id    TEXT    NOT NULL REFERENCES users(id),
                        option_id  TEXT    NOT NULL REFERENCES poll_options(id),
                        weight     INTEGER NOT NULL DEFAULT 1,
@@ -326,7 +326,7 @@ CREATE TABLE votes (
 -- INCIDENTS
 -- ============================================================
 
-CREATE TABLE incidents (
+CREATE TABLE IF NOT EXISTS incidents (
                            id                TEXT    PRIMARY KEY,
                            reporter_id       TEXT    NOT NULL REFERENCES users(id),
                            assigned_to       TEXT    REFERENCES users(id),
@@ -348,7 +348,7 @@ CREATE TABLE incidents (
 -- TABLES LOCALES (spécifiques à l'app Java)
 -- ============================================================
 
-CREATE TABLE local_accounts (
+CREATE TABLE IF NOT EXISTS local_accounts (
                                 user_id       TEXT    PRIMARY KEY,
                                 email         TEXT    NOT NULL,
                                 display_name  TEXT    NOT NULL,
@@ -356,13 +356,13 @@ CREATE TABLE local_accounts (
                                 last_login_at INTEGER
 );
 
-CREATE TABLE app_locale_config (
+CREATE TABLE IF NOT EXISTS app_locale_config (
                                    user_id    TEXT    PRIMARY KEY REFERENCES local_accounts(user_id),
                                    locale     TEXT    NOT NULL DEFAULT 'fr',
                                    updated_at INTEGER
 );
 
-CREATE TABLE plugin_state (
+CREATE TABLE IF NOT EXISTS plugin_state (
                               user_id       TEXT    NOT NULL REFERENCES local_accounts(user_id),
                               plugin_id     TEXT    NOT NULL,
                               enabled       INTEGER NOT NULL DEFAULT 1,
@@ -371,7 +371,7 @@ CREATE TABLE plugin_state (
                               PRIMARY KEY (user_id, plugin_id)
 );
 
-CREATE TABLE plugin_config (
+CREATE TABLE IF NOT EXISTS plugin_config (
                                user_id    TEXT    NOT NULL REFERENCES local_accounts(user_id),
                                plugin_id  TEXT    NOT NULL,
                                key        TEXT    NOT NULL,
@@ -380,14 +380,14 @@ CREATE TABLE plugin_config (
                                PRIMARY KEY (user_id, plugin_id, key)
 );
 
-CREATE TABLE sync_state (
+CREATE TABLE IF NOT EXISTS sync_state (
                             id              INTEGER PRIMARY KEY CHECK (id = 1),
                             last_synced_at  INTEGER,
                             last_sync_token TEXT,
                             is_rolling_back INTEGER NOT NULL DEFAULT 0  -- 1 = rollback en cours
 );
 
-CREATE TABLE sync_changelog (
+CREATE TABLE IF NOT EXISTS sync_changelog (
                                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                                 table_name      TEXT    NOT NULL,
                                 row_id          TEXT    NOT NULL,
@@ -399,7 +399,7 @@ CREATE TABLE sync_changelog (
                                 synced_at       INTEGER
 );
 
-CREATE TABLE pending_conflicts (
+CREATE TABLE IF NOT EXISTS pending_conflicts (
                                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
                                    table_name     TEXT    NOT NULL,
                                    row_id         TEXT    NOT NULL,
@@ -409,7 +409,7 @@ CREATE TABLE pending_conflicts (
                                    detected_at    INTEGER NOT NULL
 );
 
-CREATE TABLE resolved_conflicts (
+CREATE TABLE IF NOT EXISTS resolved_conflicts (
                                     id           INTEGER PRIMARY KEY AUTOINCREMENT,
                                     table_name   TEXT    NOT NULL,
                                     row_id       TEXT    NOT NULL,
