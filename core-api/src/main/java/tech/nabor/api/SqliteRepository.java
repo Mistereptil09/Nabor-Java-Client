@@ -13,7 +13,7 @@ import tech.nabor.api.repository.local.*;
 public interface SqliteRepository {
     // local tables
     LocalAccountRepository localAccounts();
-    AppLocaleConfigRepository localeConfigs();
+    LocaleConfigRepository localeConfigs();
     PluginStateRepository pluginStates();
     PluginConfigRepository pluginConfigs();
 
