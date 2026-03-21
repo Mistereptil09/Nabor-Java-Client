@@ -6,3 +6,4 @@ include("core-impl")
 include("app-desktop")
 
 // plugins
+include("plugins:sync")
