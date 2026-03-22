@@ -8,7 +8,6 @@ import java.util.Optional;
 
 public interface ChatGroupRepository {
     Optional<ChatGroup> findById(String id);
-    List<ChatGroup> findByUserId(String userId);         // groups where user is a part of
     List<ChatGroup> findByType(ChatGroupType type);
     void save(ChatGroup group);
     void delete(String id);                              // soft delete — changes deleted_at
