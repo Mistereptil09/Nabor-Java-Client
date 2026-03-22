@@ -3,12 +3,9 @@ package tech.nabor.app.db.repository.user;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import tech.nabor.api.model.user.User;
 import tech.nabor.api.model.user.UserSession;
-import tech.nabor.api.model.enums.MessagePolicy;
-import tech.nabor.api.model.enums.UserRole;
-import tech.nabor.api.model.enums.Visibility;
 import tech.nabor.app.db.BaseRepositoryTest;
+import tech.nabor.app.db.fixtures.UserFixtures;
 
 import java.time.Instant;
 import java.util.List;

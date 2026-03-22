@@ -15,7 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import tech.nabor.app.db.repository.user.UserFixtures;
+import tech.nabor.app.db.fixtures.UserFixtures;
 
 class UserRepositoryTest extends BaseRepositoryTest {
 

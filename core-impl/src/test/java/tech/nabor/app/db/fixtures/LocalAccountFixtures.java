@@ -1,4 +1,4 @@
-package tech.nabor.app.db.repository.local;
+package tech.nabor.app.db.fixtures;
 
 import tech.nabor.api.model.local.LocalAccount;
 

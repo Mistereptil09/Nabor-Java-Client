@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tech.nabor.api.model.local.LocalAccount;
 import tech.nabor.app.db.BaseRepositoryTest;
+import tech.nabor.app.db.fixtures.LocalAccountFixtures;
 
 import java.time.Instant;
 import java.util.List;
