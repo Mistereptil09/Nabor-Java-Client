@@ -4,6 +4,7 @@ on:
     branches: [ "main", "dev" ]
   pull_request:
     branches: [ "main", "dev" ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,19 +12,19 @@ jobs:
       matrix:
         java-version: [17, 21]
 
-  steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up JDK ${{ matrix.java-version }}
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: ${{ matrix.java-version }}
-        cache: gradle
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+          cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x ./gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
-    - name: Build & run tests
-      run: ./gradlew build --no-daemon --no-parallel
+      - name: Build & run tests
+        run: ./gradlew build --no-daemon --no-parallel
