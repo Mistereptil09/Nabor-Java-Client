@@ -83,7 +83,7 @@ public class AppFriendshipRepository implements FriendshipRepository {
                 h.createUpdate("""
                 INSERT INTO friendships (id, user1_id, user2_id, friended_at, unfriended_at, group_id)
                 VALUES (:id, :user1Id, :user2Id, :friendedAt, :unfriendedAt, :groupId)
-                ON CONFLICT(user1_id, user2_id) DO UPDATE SET
+                ON CONFLICT(id) DO UPDATE SET
                     friended_at   = excluded.friended_at,
                     unfriended_at = excluded.unfriended_at,
                     group_id      = excluded.group_id
