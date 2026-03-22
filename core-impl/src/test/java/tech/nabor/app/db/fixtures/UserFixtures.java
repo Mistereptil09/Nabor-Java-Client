@@ -1,4 +1,4 @@
-package tech.nabor.app.db.repository.user;
+package tech.nabor.app.db.fixtures;
 
 import tech.nabor.api.model.enums.MessagePolicy;
 import tech.nabor.api.model.enums.UserRole;
