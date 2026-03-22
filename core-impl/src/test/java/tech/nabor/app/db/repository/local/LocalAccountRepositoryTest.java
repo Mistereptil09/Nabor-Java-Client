@@ -25,7 +25,7 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void findById_returns_account_when_exists() {
-        repo.save(new LocalAccount("user-1", "antonio@example.com", "Antonio B", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "antonio@example.com", "Antonio B"));
 
         Optional<LocalAccount> found = repo.findById("user-1");
 
@@ -51,8 +51,8 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void findAll_returns_all_accounts() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
-        repo.save(new LocalAccount("user-2", "b@test.com", "User B", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-2", "b@test.com", "User B"));
 
         assertEquals(2, repo.findAll().size());
     }
@@ -62,6 +62,7 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
         Instant earlier = Instant.parse("2026-01-01T10:00:00Z");
         Instant later   = Instant.parse("2026-03-01T10:00:00Z");
 
+        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, earlier));
         repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, earlier));
         repo.save(new LocalAccount("user-2", "b@test.com", "User B", false, later));
 
@@ -86,15 +87,15 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void findActive_returns_empty_when_no_active_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
 
         assertTrue(repo.findActive().isEmpty());
     }
 
     @Test
     void findActive_returns_active_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
-        repo.save(new LocalAccount("user-2", "b@test.com", "User B", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-2", "b@test.com", "User B"));
         repo.setActive("user-1");
 
         Optional<LocalAccount> active = repo.findActive();
@@ -106,15 +107,15 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void save_inserts_new_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
 
         assertEquals(1, repo.findAll().size());
     }
 
     @Test
     void save_updates_existing_account() {
-        repo.save(new LocalAccount("user-1", "old@test.com", "Old Name", false, null));
-        repo.save(new LocalAccount("user-1", "new@test.com", "New Name", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "old@test.com", "Old Name"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "new@test.com", "New Name"));
 
         LocalAccount found = repo.findById("user-1").orElseThrow();
         assertEquals("new@test.com", found.email());
@@ -143,7 +144,7 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void setActive_activates_target_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
         repo.setActive("user-1");
 
         assertTrue(repo.findById("user-1").orElseThrow().isActive());
@@ -151,8 +152,8 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void setActive_deactivates_previously_active_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
-        repo.save(new LocalAccount("user-2", "b@test.com", "User B", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-2", "b@test.com", "User B"));
 
         repo.setActive("user-1");
         repo.setActive("user-2");
@@ -163,9 +164,9 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void setActive_only_one_active_at_a_time() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
-        repo.save(new LocalAccount("user-2", "b@test.com", "User B", false, null));
-        repo.save(new LocalAccount("user-3", "c@test.com", "User C", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-2", "b@test.com", "User B"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-3", "c@test.com", "User C"));
 
         repo.setActive("user-2");
 
@@ -179,7 +180,7 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void delete_removes_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
         repo.delete("user-1");
 
         assertTrue(repo.findById("user-1").isEmpty());
@@ -192,8 +193,8 @@ class LocalAccountRepositoryTest extends BaseRepositoryTest {
 
     @Test
     void delete_only_removes_target_account() {
-        repo.save(new LocalAccount("user-1", "a@test.com", "User A", false, null));
-        repo.save(new LocalAccount("user-2", "b@test.com", "User B", false, null));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-1", "a@test.com", "User A"));
+        repo.save(LocalAccountFixtures.basicLocalAccount("user-2", "b@test.com", "User B"));
 
         repo.delete("user-1");
 
