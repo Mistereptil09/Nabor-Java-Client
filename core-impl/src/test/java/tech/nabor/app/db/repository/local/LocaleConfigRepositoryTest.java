@@ -13,12 +13,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LocaleConfigRepositoryTest extends BaseRepositoryTest {
 
-    private AppLocaleConfigRepositoryImpl repo;
+    private AppLocaleConfigRepository repo;
     private AppLocalAccountRepository accountRepo;
 
     @BeforeEach
     void setUp() {
-        repo        = new AppLocaleConfigRepositoryImpl(jdbi);
+        repo        = new AppLocaleConfigRepository(jdbi);
         accountRepo = new AppLocalAccountRepository(jdbi);
 
         accountRepo.save(new LocalAccount(

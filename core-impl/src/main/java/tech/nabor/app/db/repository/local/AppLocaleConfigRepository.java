@@ -11,11 +11,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
 
-public class AppLocaleConfigRepositoryImpl implements LocaleConfigRepository {
+public class AppLocaleConfigRepository implements LocaleConfigRepository {
 
     private final Jdbi jdbi;
 
-    public AppLocaleConfigRepositoryImpl(Jdbi jdbi) {
+    public AppLocaleConfigRepository(Jdbi jdbi) {
         this.jdbi = jdbi;
     }
 

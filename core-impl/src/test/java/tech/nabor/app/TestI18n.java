@@ -1,4 +1,4 @@
-package tech.nabor.app.db;
+package tech.nabor.app;
 
 import tech.nabor.api.I18n;
 

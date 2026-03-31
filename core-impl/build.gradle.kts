@@ -15,5 +15,6 @@ dependencies {
     implementation("org.jdbi:jdbi3-sqlobject:3.45.0")  // SQL annotations
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
 
+    testImplementation("com.github.tomakehurst:wiremock-standalone:3.0.1")
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.9")
 }
