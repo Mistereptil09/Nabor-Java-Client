@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
                        last_name                TEXT    NOT NULL,
                        email                    TEXT    UNIQUE NOT NULL,
                        password_hash            TEXT    NOT NULL,
+                       totp_secret              TEXT,   -- TODO remove this
                        stripe_account_id        TEXT    UNIQUE,
                        neighbourhood_id         TEXT,
                        visibility               TEXT    NOT NULL DEFAULT 'public'
