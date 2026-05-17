@@ -14,6 +14,9 @@ dependencies {
     implementation("org.jdbi:jdbi3-core:3.45.0")
     implementation("org.jdbi:jdbi3-sqlobject:3.45.0")  // SQL annotations
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
+    
+    // SLF4J logger implementation (for JDBI logging)
+    implementation("org.slf4j:slf4j-simple:2.0.9")
 
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.9")
 }

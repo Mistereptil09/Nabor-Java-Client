@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
                        last_name                TEXT    NOT NULL,
                        email                    TEXT    UNIQUE NOT NULL,
                        password_hash            TEXT    NOT NULL,
-                       totp_secret              TEXT,
                        stripe_account_id        TEXT    UNIQUE,
                        neighbourhood_id         TEXT,
                        visibility               TEXT    NOT NULL DEFAULT 'public'
@@ -354,6 +353,7 @@ CREATE TABLE IF NOT EXISTS local_accounts (
                                 display_name  TEXT    NOT NULL,
                                 is_active     INTEGER NOT NULL DEFAULT 0,
                                 last_login_at INTEGER
+                                -- TODO add token for identification
 );
 
 CREATE TABLE IF NOT EXISTS app_locale_config (
