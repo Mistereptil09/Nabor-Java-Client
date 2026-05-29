@@ -1,0 +1,139 @@
+package tech.nabor.ui;
+
+import java.util.Optional;
+
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import tech.nabor.AppContext;
+import tech.nabor.api.ConnectedUser;
+import tech.nabor.api.NaborPlugin;
+import tech.nabor.api.error.NaborException;
+import tech.nabor.ui.i18n.I18nManager;
+import tech.nabor.ui.theme.ThemeManager;
+
+/**
+ * Contrôleur du shell principal (§7.1).
+ *
+ * <p>Construit la topbar (utilisateur, état, langue, thème), la navigation
+ * latérale (écrans cœur + une entrée par plugin exposant une vue) et héberge la
+ * vue sélectionnée — rôle du {@code PluginHostController}. Les libellés passent
+ * par {@link I18nManager} et se rafraîchissent à chaud via {@link #applyTexts()}.</p>
+ */
+public class MainController {
+
+    @FXML private HBox topBar;
+    @FXML private VBox navBox;
+    @FXML private StackPane contentArea;
+    @FXML private Label userLabel;
+    @FXML private Label onlineLabel;
+    @FXML private Label placeholderLabel;
+
+    private AppContext app;
+    private I18nManager i18n;
+
+    private Button langButton;
+    private Button incidentsNavButton;
+    private Button statsNavButton;
+
+    /** Injecté par {@code NaborApp} juste après le chargement du FXML. */
+    public void init(AppContext app, I18nManager i18n) {
+        this.app = app;
+        this.i18n = i18n;
+
+        ConnectedUser user = app.pluginContext().getConnectedUser();
+        userLabel.setText(user.getEmail() + "  ·  " + user.getRole());
+
+        installLanguageToggle();
+        setupNavigation();
+
+        i18n.onLocaleChange(this::applyTexts);
+        applyTexts();
+    }
+
+    private void installLanguageToggle() {
+        langButton = new Button();
+        langButton.getStyleClass().add("theme-button");
+        langButton.setOnAction(e -> i18n.toggle());
+        topBar.getChildren().add(langButton);
+    }
+
+    /** Installe le bouton de bascule de thème dans la topbar (appelé par NaborApp). */
+    public void setThemeManager(ThemeManager themeManager) {
+        Button themeButton = new Button("🎨");
+        themeButton.getStyleClass().add("theme-button");
+        themeButton.setOnAction(e -> themeManager.toggle());
+        topBar.getChildren().add(themeButton);
+    }
+
+    private void setupNavigation() {
+        // Écrans cœur de l'application.
+        Node incidentsView = loadScreen("/fxml/incidents-view.fxml");
+        if (incidentsView != null) {
+            incidentsNavButton = addNavItem("Incidents", incidentsView);
+            showView(incidentsView); // écran par défaut
+        }
+
+        Node statsView = loadScreen("/fxml/statistics-view.fxml");
+        if (statsView != null) {
+            statsNavButton = addNavItem("Statistiques", statsView);
+        }
+
+        // Vues fournies par les plugins.
+        for (NaborPlugin plugin : app.registry().getPlugins()) {
+            Optional<Node> view = plugin.getView();
+            view.ifPresent(node -> addNavItem(plugin.getDisplayName(), node));
+        }
+    }
+
+    /** Charge un FXML d'écran cœur et y injecte le contexte + i18n. */
+    private Node loadScreen(String fxmlPath) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            Parent root = loader.load();
+            Object controller = loader.getController();
+            if (controller instanceof IncidentsController incidents) {
+                incidents.init(app, i18n);
+            } else if (controller instanceof StatisticsController statistics) {
+                statistics.init(app, i18n);
+            }
+            return root;
+        } catch (Exception e) {
+            app.pluginContext().getReporter().reportError(new NaborException(
+                    NaborException.Kind.VALIDATION, "Échec du chargement de l'écran : " + fxmlPath, e));
+            return null;
+        }
+    }
+
+    private Button addNavItem(String label, Node view) {
+        Button navButton = new Button(label);
+        navButton.setMaxWidth(Double.MAX_VALUE);
+        navButton.getStyleClass().add("nav-button");
+        navButton.setOnAction(e -> showView(view));
+        navBox.getChildren().add(navButton);
+        return navButton;
+    }
+
+    private void showView(Node view) {
+        contentArea.getChildren().setAll(view);
+    }
+
+    private void applyTexts() {
+        ConnectedUser user = app.pluginContext().getConnectedUser();
+        onlineLabel.setText(user.isOnline() ? i18n.t("topbar.online") : i18n.t("topbar.offline"));
+        placeholderLabel.setText(i18n.t("shell.placeholder"));
+        langButton.setText("🌐 " + i18n.locale().toUpperCase());
+        if (incidentsNavButton != null) {
+            incidentsNavButton.setText(i18n.t("nav.incidents"));
+        }
+        if (statsNavButton != null) {
+            statsNavButton.setText(i18n.t("nav.stats"));
+        }
+    }
+}
