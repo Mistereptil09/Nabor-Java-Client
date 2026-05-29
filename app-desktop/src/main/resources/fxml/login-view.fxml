@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Écran de connexion SSO par QR code (§7.2 — LoginController). -->
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="tech.nabor.ui.LoginController"
+           styleClass="content-area">
+
+    <VBox alignment="CENTER" spacing="18" maxWidth="420">
+        <padding>
+            <Insets top="32" right="32" bottom="32" left="32"/>
+        </padding>
+
+        <Label fx:id="titleLabel" styleClass="login-title"/>
+        <Label fx:id="subtitleLabel" wrapText="true" styleClass="login-subtitle"/>
+
+        <ImageView fx:id="qrImage" fitWidth="240" fitHeight="240" preserveRatio="true"/>
+
+        <Label fx:id="statusLabel" styleClass="login-status"/>
+
+        <Button fx:id="refreshButton" onAction="#onRefresh"/>
+        <Button fx:id="devLoginButton" onAction="#onDevLogin" styleClass="dev-button"/>
+    </VBox>
+
+</StackPane>
