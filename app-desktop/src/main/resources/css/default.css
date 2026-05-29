@@ -1,0 +1,12 @@
+/*
+ * default.css — thème clair (§7.6 / §12.3).
+ * background #FFFFFF · primary #0F2A5E · accent #F7931E
+ */
+.root {
+    -nabor-bg:      #FFFFFF;
+    -nabor-surface: #F7F7F8;
+    -nabor-primary: #0F2A5E;
+    -nabor-accent:  #F7931E;
+    -nabor-text:    #1A1A2E;
+    -nabor-text-muted: #8C8C8C;
+}
