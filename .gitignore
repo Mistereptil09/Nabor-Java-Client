@@ -43,3 +43,9 @@ bin/
 .DS_Store
 
 .idea/
+
+### Local app data ###
+# Base SQLite locale générée au runtime (offline-first) — ne pas committer
+*.db
+*.db-journal
+*.db-wal
