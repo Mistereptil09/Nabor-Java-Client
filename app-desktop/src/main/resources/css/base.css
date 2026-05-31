@@ -65,6 +65,14 @@
     -fx-cursor: hand;
 }
 .accent-button:hover { -fx-background-color: derive(-nabor-accent, -10%); }
+.danger-button {
+    -fx-background-color: -nabor-error;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+.danger-button:hover { -fx-background-color: derive(-nabor-error, -10%); }
 
 /* ── Statistiques (étape 8) ──────────────────────────────── */
 .kpi-card {

@@ -15,6 +15,7 @@ import tech.nabor.api.error.NaborReporter;
 import tech.nabor.api.model.enums.MessagePolicy;
 import tech.nabor.api.model.enums.UserRole;
 import tech.nabor.api.model.enums.Visibility;
+import tech.nabor.api.model.local.LocalAccount;
 import tech.nabor.api.model.user.User;
 import tech.nabor.service.AuthService;
 import tech.nabor.ui.LoginController;
@@ -106,6 +107,10 @@ public class NaborApp extends Application {
                 Visibility.public_, null, MessagePolicy.open, i18n.locale(),
                 null, null, UserRole.valueOf(session.role()),
                 now, null, now, null, null));
+
+        db.localAccounts().save(new LocalAccount(
+                session.userId(), session.email(), "Dev Admin", true, now));
+        db.localAccounts().setActive(session.userId());
     }
 
     @Override

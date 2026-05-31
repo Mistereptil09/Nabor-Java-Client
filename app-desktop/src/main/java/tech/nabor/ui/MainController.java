@@ -34,6 +34,8 @@ public class MainController {
     private Button langButton;
     private Button incidentsNavButton;
     private Button statsNavButton;
+    private Button syncNavButton;
+    private Button settingsNavButton;
 
     public void init(AppContext app, I18nManager i18n) {
         this.app = app;
@@ -75,6 +77,16 @@ public class MainController {
             statsNavButton = addNavItem("Statistiques", statsView);
         }
 
+        Node syncView = loadScreen("/fxml/sync-view.fxml");
+        if (syncView != null) {
+            syncNavButton = addNavItem("Synchronisation", syncView);
+        }
+
+        Node settingsView = loadScreen("/fxml/settings-view.fxml");
+        if (settingsView != null) {
+            settingsNavButton = addNavItem("Réglages", settingsView);
+        }
+
         for (NaborPlugin plugin : app.registry().getPlugins()) {
             Optional<Node> view = plugin.getView();
             view.ifPresent(node -> addNavItem(plugin.getDisplayName(), node));
@@ -90,6 +102,10 @@ public class MainController {
                 incidents.init(app, i18n);
             } else if (controller instanceof StatisticsController statistics) {
                 statistics.init(app, i18n);
+            } else if (controller instanceof SyncController sync) {
+                sync.init(app, i18n);
+            } else if (controller instanceof SettingsController settings) {
+                settings.init(app, i18n);
             }
             return root;
         } catch (Exception e) {
@@ -122,6 +138,12 @@ public class MainController {
         }
         if (statsNavButton != null) {
             statsNavButton.setText(i18n.t("nav.stats"));
+        }
+        if (syncNavButton != null) {
+            syncNavButton.setText(i18n.t("nav.sync"));
+        }
+        if (settingsNavButton != null) {
+            settingsNavButton.setText(i18n.t("nav.settings"));
         }
     }
 }
