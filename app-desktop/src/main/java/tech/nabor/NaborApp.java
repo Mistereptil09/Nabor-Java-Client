@@ -23,13 +23,7 @@ import tech.nabor.ui.UiNaborReporter;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.theme.ThemeManager;
 
-/**
- * Point d'entrée JavaFX du client lourd (§7.1 — {@code NaborApp.java}).
- *
- * <p>Démarrage en deux temps : l'écran de connexion SSO (§7.2) s'affiche
- * d'abord ; à la connexion, l'utilisateur est renseigné, les plugins chargés,
- * puis le shell ({@code main-view.fxml}) monté.</p>
- */
+
 public class NaborApp extends Application {
 
     private AppContext app;
@@ -39,13 +33,11 @@ public class NaborApp extends Application {
 
     @Override
     public void init() {
-        // init() s'exécute sur le launcher thread, avant l'UI : on y fait le câblage.
         app = Bootstrap.create();
     }
 
     @Override
     public void start(Stage stage) throws Exception {
-        // Racine = couche de contenu + couche de toasts par-dessus.
         StackPane sceneRoot = new StackPane();
         contentHolder = new StackPane();
         sceneRoot.getChildren().add(contentHolder);
@@ -69,7 +61,6 @@ public class NaborApp extends Application {
         stage.show();
     }
 
-    /** Affiche l'écran de connexion SSO. */
     private void showLogin() throws Exception {
         AuthService auth = new AuthService(app.pluginContext().getHttpClient());
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login-view.fxml"));
@@ -79,17 +70,14 @@ public class NaborApp extends Application {
         contentHolder.getChildren().setAll(root);
     }
 
-    /** Connexion réussie : renseigne l'utilisateur, charge les plugins, monte le shell. */
     private void onAuthenticated(AuthService.Session session) {
         ConnectedUser user = app.pluginContext().getConnectedUser();
         if (user instanceof MutableConnectedUser mutable) {
             mutable.connect(session.userId(), session.email(), session.role());
         }
 
-        // L'utilisateur connecté doit exister localement (FK incidents.reporter_id, etc.).
         ensureLocalUser(session);
 
-        // Les plugins ne sont chargés qu'une fois l'utilisateur connu (getView() sur le FX thread).
         app.registry().loadAll(app.pluginContext());
 
         try {
@@ -105,11 +93,7 @@ public class NaborApp extends Application {
         }
     }
 
-    /**
-     * Garantit la présence de l'utilisateur connecté dans la table {@code users}
-     * locale. En production, la synchronisation entrante (§7.3) amène les users ;
-     * ici on insère l'utilisateur dev pour satisfaire les clés étrangères.
-     */
+  
     private void ensureLocalUser(AuthService.Session session) {
         SqliteRepository db = app.pluginContext().getDb();
         if (db.users().findById(session.userId()).isPresent()) {

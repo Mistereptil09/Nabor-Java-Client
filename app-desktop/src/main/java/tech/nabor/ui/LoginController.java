@@ -13,13 +13,7 @@ import tech.nabor.service.AuthService;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.util.QRCodeUtil;
 
-/**
- * Contrôleur de l'écran de connexion SSO par QR code (§7.2).
- *
- * <p>Génère un défi, affiche le QR, sonde le statut toutes les 2 s et expire le
- * QR au bout de 2 min (rotation via « Rafraîchir »). En l'absence de backend, le
- * bouton « Simuler la connexion (dev) » poursuit le flux.</p>
- */
+
 public class LoginController {
 
     private static final int QR_SIZE = 240;
@@ -73,7 +67,6 @@ public class LoginController {
 
     private void poll() {
         if (auth.pollStatus(challenge.tokenUuid()) == AuthService.Status.VALIDATED) {
-            // Le vrai flux récupérera la session validée ; non atteignable sans backend.
             stopTimers();
         }
     }

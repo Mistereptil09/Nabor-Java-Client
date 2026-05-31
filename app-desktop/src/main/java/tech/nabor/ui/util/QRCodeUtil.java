@@ -15,10 +15,7 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 
-/**
- * Génère un QR code (§7.1 — {@code QRCodeUtil}) et le rend directement en
- * {@link Image} JavaFX (via {@link WritableImage}, sans dépendance Swing).
- */
+
 public final class QRCodeUtil {
 
     private QRCodeUtil() {

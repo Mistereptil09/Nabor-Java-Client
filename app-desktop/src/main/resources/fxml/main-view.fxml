@@ -9,11 +9,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!--
-  Shell principal du client desktop (§7.1 — MainController).
-  BorderPane : topbar en haut, sidebar de navigation à gauche,
-  zone de contenu au centre (hôte des vues de plugins / écrans).
--->
+
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="tech.nabor.ui.MainController"

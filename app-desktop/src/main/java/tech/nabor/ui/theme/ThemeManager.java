@@ -5,11 +5,7 @@ import java.util.Objects;
 import javafx.scene.Scene;
 import tech.nabor.SettingsStore;
 
-/**
- * Gère les thèmes JavaFX (§7.6) : applique {@code base.css} + le CSS du thème
- * actif sur la scène, et persiste le choix dans {@link SettingsStore}
- * (clé {@code active_theme}).
- */
+
 public class ThemeManager {
 
     public enum Theme {
@@ -51,7 +47,6 @@ public class ThemeManager {
         this.settings = settings;
     }
 
-    /** Applique le thème mémorisé (ou le thème clair par défaut). */
     public void applySaved() {
         apply(Theme.fromId(settings.get(SETTINGS_KEY, Theme.DEFAULT.id())));
     }
@@ -62,7 +57,6 @@ public class ThemeManager {
         settings.put(SETTINGS_KEY, theme.id());
     }
 
-    /** Bascule clair ↔ sombre. */
     public void toggle() {
         apply(current == Theme.DEFAULT ? Theme.DARK : Theme.DEFAULT);
     }

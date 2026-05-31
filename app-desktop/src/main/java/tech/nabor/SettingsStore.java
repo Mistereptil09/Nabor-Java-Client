@@ -7,18 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
-/**
- * Réglages locaux de l'application (thème, locale, …), persistés dans
- * {@code ~/.nabor/settings.properties}.
- *
- * <p>Le cahier (§7.6) prévoit de stocker ces clés dans la table SQLite
- * {@code app_settings}. Cette table n'existe pas encore dans le schéma
- * (seul {@code app_locale_config} est présent), donc on persiste pour
- * l'instant dans un fichier de propriétés autonome.</p>
- *
- * <p>TODO : migrer vers {@code app_settings} (clés {@code active_theme},
- * {@code locale}) quand la table sera ajoutée côté core.</p>
- */
+
 public class SettingsStore {
 
     private final Path file;

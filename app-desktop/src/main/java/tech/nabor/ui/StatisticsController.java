@@ -17,10 +17,7 @@ import tech.nabor.api.model.enums.IncidentStatus;
 import tech.nabor.service.StatsService;
 import tech.nabor.ui.i18n.I18nManager;
 
-/**
- * Écran Statistiques (§7) : cartes KPI + graphiques incidents/participations,
- * calculés en local par {@link StatsService}. Recalculable via « Rafraîchir ».
- */
+
 public class StatisticsController {
 
     @FXML private Label screenTitle;

@@ -111,7 +111,6 @@ public class IncidentsController {
         assignButton.setText(i18n.t("incidents.assign"));
         resolveButton.setText(i18n.t("incidents.resolve"));
 
-        // Re-rendu des libellés traduits dans le combo et la table.
         String selected = statusFilter.getValue();
         statusFilter.setItems(FXCollections.observableArrayList("all", "open", "in_progress", "resolved"));
         statusFilter.getSelectionModel().select(selected != null ? selected : "all");
@@ -230,7 +229,6 @@ public class IncidentsController {
         grid.addRow(2, new Label(i18n.t("incidents.field.severity")), severityBox);
         dialog.getDialogPane().setContent(grid);
 
-        // Le dialogue suit le thème courant.
         if (table.getScene() != null) {
             dialog.getDialogPane().getStylesheets().setAll(table.getScene().getStylesheets());
         }

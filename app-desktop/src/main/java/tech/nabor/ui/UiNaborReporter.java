@@ -12,19 +12,7 @@ import javafx.util.Duration;
 import tech.nabor.api.error.NaborException;
 import tech.nabor.api.error.NaborReporter;
 
-/**
- * Implémentation UI du {@link NaborReporter} : affiche des toasts non bloquants
- * en bas à droite de la fenêtre (vert/orange/rouge selon la sévérité, §12) tout
- * en déléguant le log à un reporter console.
- *
- * <p>Le reporter est créé au bootstrap, <em>avant</em> que la scène existe :
- * tant que {@link #attachToastLayer(StackPane)} n'a pas été appelé, les messages
- * ne sont que loggés (pas de toast). C'est {@code NaborApp} qui branche la couche
- * d'overlay une fois la fenêtre construite.</p>
- *
- * <p>Thread-safe : tout affichage est marshallé sur le FX Application Thread,
- * car les plugins peuvent appeler le reporter depuis des threads de fond.</p>
- */
+
 public class UiNaborReporter implements NaborReporter {
 
     private enum Severity { INFO, WARNING, ERROR }
@@ -39,12 +27,11 @@ public class UiNaborReporter implements NaborReporter {
         this.console = console;
     }
 
-    /** Branche la couche d'overlay où empiler les toasts (appelé par NaborApp). */
     public void attachToastLayer(StackPane overlay) {
         VBox box = new VBox(8);
         box.setAlignment(Pos.BOTTOM_RIGHT);
         box.setPadding(new Insets(16));
-        box.setMouseTransparent(true);   // laisse passer les clics vers l'UI dessous
+        box.setMouseTransparent(true);   
         box.setPickOnBounds(false);
         StackPane.setAlignment(box, Pos.BOTTOM_RIGHT);
         overlay.getChildren().add(box);
@@ -72,7 +59,7 @@ public class UiNaborReporter implements NaborReporter {
 
     private void showToast(String message, Severity severity) {
         if (toastBox == null) {
-            return; // UI pas encore prête — déjà loggé en console.
+            return; 
         }
         if (Platform.isFxApplicationThread()) {
             displayToast(message, severity);
@@ -87,7 +74,6 @@ public class UiNaborReporter implements NaborReporter {
         toast.setMaxWidth(360);
         toast.setPadding(new Insets(10, 14, 10, 14));
         toast.getStyleClass().addAll("toast", styleClassFor(severity));
-        // Style inline = filet de sécurité avant l'arrivée du CSS de thème (étape 4).
         toast.setStyle(inlineStyleFor(severity));
 
         toastBox.getChildren().add(toast);
@@ -113,9 +99,9 @@ public class UiNaborReporter implements NaborReporter {
 
     private String inlineStyleFor(Severity severity) {
         String background = switch (severity) {
-            case INFO -> "#0F2A5E";     // navy primary
-            case WARNING -> "#F7931E";  // orange accent
-            case ERROR -> "#E8534A";    // rouge erreur
+            case INFO -> "#0F2A5E";     
+            case WARNING -> "#F7931E";  
+            case ERROR -> "#E8534A";   
         };
         return "-fx-background-color: " + background + ";"
                 + "-fx-text-fill: white;"

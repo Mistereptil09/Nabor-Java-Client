@@ -10,13 +10,7 @@ import tech.nabor.api.model.enums.IncidentSeverity;
 import tech.nabor.api.model.enums.IncidentStatus;
 import tech.nabor.api.model.events.Evenement;
 
-/**
- * Calcule les statistiques affichées dans l'app desktop (§7 — statistiques sur
- * les incidents et les participations des voisins).
- *
- * <p>Toutes les valeurs sont calculées localement sur SQLite → disponibles
- * hors-ligne sur les données déjà synchronisées.</p>
- */
+
 public class StatsService {
 
     private static final int LIMIT = 500;
@@ -55,7 +49,6 @@ public class StatsService {
         return total;
     }
 
-    /** Somme des inscriptions confirmées (status = registered) sur tous les événements. */
     public int totalRegistrations() {
         int total = 0;
         for (EventStatus status : EventStatus.values()) {

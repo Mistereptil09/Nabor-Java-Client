@@ -18,14 +18,7 @@ import tech.nabor.api.error.NaborException;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.theme.ThemeManager;
 
-/**
- * Contrôleur du shell principal (§7.1).
- *
- * <p>Construit la topbar (utilisateur, état, langue, thème), la navigation
- * latérale (écrans cœur + une entrée par plugin exposant une vue) et héberge la
- * vue sélectionnée — rôle du {@code PluginHostController}. Les libellés passent
- * par {@link I18nManager} et se rafraîchissent à chaud via {@link #applyTexts()}.</p>
- */
+
 public class MainController {
 
     @FXML private HBox topBar;
@@ -42,7 +35,6 @@ public class MainController {
     private Button incidentsNavButton;
     private Button statsNavButton;
 
-    /** Injecté par {@code NaborApp} juste après le chargement du FXML. */
     public void init(AppContext app, I18nManager i18n) {
         this.app = app;
         this.i18n = i18n;
@@ -64,7 +56,6 @@ public class MainController {
         topBar.getChildren().add(langButton);
     }
 
-    /** Installe le bouton de bascule de thème dans la topbar (appelé par NaborApp). */
     public void setThemeManager(ThemeManager themeManager) {
         Button themeButton = new Button("🎨");
         themeButton.getStyleClass().add("theme-button");
@@ -73,11 +64,10 @@ public class MainController {
     }
 
     private void setupNavigation() {
-        // Écrans cœur de l'application.
         Node incidentsView = loadScreen("/fxml/incidents-view.fxml");
         if (incidentsView != null) {
             incidentsNavButton = addNavItem("Incidents", incidentsView);
-            showView(incidentsView); // écran par défaut
+            showView(incidentsView); 
         }
 
         Node statsView = loadScreen("/fxml/statistics-view.fxml");
@@ -85,14 +75,12 @@ public class MainController {
             statsNavButton = addNavItem("Statistiques", statsView);
         }
 
-        // Vues fournies par les plugins.
         for (NaborPlugin plugin : app.registry().getPlugins()) {
             Optional<Node> view = plugin.getView();
             view.ifPresent(node -> addNavItem(plugin.getDisplayName(), node));
         }
     }
 
-    /** Charge un FXML d'écran cœur et y injecte le contexte + i18n. */
     private Node loadScreen(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));

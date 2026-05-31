@@ -9,7 +9,6 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Écran Statistiques (§7) : KPIs + graphiques, calculés en local (offline). -->
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="tech.nabor.ui.StatisticsController"
@@ -48,7 +47,6 @@
                 </VBox>
             </HBox>
 
-            <!-- Graphiques (ajoutés par le contrôleur) -->
             <FlowPane fx:id="chartsBox" hgap="18" vgap="18"/>
         </VBox>
     </center>
