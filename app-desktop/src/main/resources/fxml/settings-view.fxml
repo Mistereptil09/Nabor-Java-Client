@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="tech.nabor.ui.SettingsController"
+      spacing="18" styleClass="content-area">
+    <padding>
+        <Insets top="18" right="18" bottom="18" left="18"/>
+    </padding>
+
+    <Label fx:id="screenTitle" styleClass="screen-title"/>
+
+    <!-- Section Plugins -->
+    <Label fx:id="pluginsTitle" styleClass="detail-title"/>
+    <TableView fx:id="pluginTable" prefHeight="220">
+        <columns>
+            <TableColumn fx:id="pluginNameCol" prefWidth="200"/>
+            <TableColumn fx:id="pluginIdCol" prefWidth="150"/>
+            <TableColumn fx:id="pluginStateCol" prefWidth="110"/>
+            <TableColumn fx:id="pluginActionsCol" prefWidth="240"/>
+        </columns>
+    </TableView>
+
+    <Separator/>
+
+    <!-- Section Mises à jour -->
+    <Label fx:id="updatesTitle" styleClass="detail-title"/>
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label fx:id="versionLabel" styleClass="detail-meta"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="checkUpdateButton" onAction="#onCheckUpdate"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- Section Désinstallation de l'application -->
+    <Label fx:id="dangerTitle" styleClass="detail-title"/>
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label fx:id="dangerHint" styleClass="detail-meta" wrapText="true"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="uninstallAppButton" onAction="#onUninstallApp" styleClass="danger-button"/>
+    </HBox>
+
+</VBox>
