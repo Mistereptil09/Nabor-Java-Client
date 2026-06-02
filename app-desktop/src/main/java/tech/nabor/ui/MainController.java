@@ -30,12 +30,17 @@ public class MainController {
 
     private AppContext app;
     private I18nManager i18n;
+    private ThemeManager themeManager;
 
     private Button langButton;
     private Button incidentsNavButton;
     private Button statsNavButton;
     private Button syncNavButton;
     private Button settingsNavButton;
+
+    public void setThemeManager(ThemeManager themeManager) {
+        this.themeManager = themeManager;
+    }
 
     public void init(AppContext app, I18nManager i18n) {
         this.app = app;
@@ -45,6 +50,7 @@ public class MainController {
         userLabel.setText(user.getEmail() + "  ·  " + user.getRole());
 
         installLanguageToggle();
+        installThemeToggle();
         setupNavigation();
 
         i18n.onLocaleChange(this::applyTexts);
@@ -58,7 +64,7 @@ public class MainController {
         topBar.getChildren().add(langButton);
     }
 
-    public void setThemeManager(ThemeManager themeManager) {
+    private void installThemeToggle() {
         Button themeButton = new Button("🎨");
         themeButton.getStyleClass().add("theme-button");
         themeButton.setOnAction(e -> themeManager.toggle());
@@ -105,7 +111,7 @@ public class MainController {
             } else if (controller instanceof SyncController sync) {
                 sync.init(app, i18n);
             } else if (controller instanceof SettingsController settings) {
-                settings.init(app, i18n);
+                settings.init(app, i18n, themeManager);
             }
             return root;
         } catch (Exception e) {
