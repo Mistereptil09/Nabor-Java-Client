@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -14,6 +15,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import tech.nabor.AppContext;
+import tech.nabor.api.EventBus;
 import tech.nabor.api.error.NaborReporter;
 import tech.nabor.api.model.sync.PendingConflict;
 import tech.nabor.service.SyncService;
@@ -39,8 +41,10 @@ public class SyncController {
     private SyncService service;
     private I18nManager i18n;
     private NaborReporter reporter;
+    private AppContext app;
 
     public void init(AppContext app, I18nManager i18n) {
+        this.app = app;
         this.i18n = i18n;
         this.service = new SyncService(app.pluginContext());
         this.reporter = app.pluginContext().getReporter();
@@ -49,6 +53,12 @@ public class SyncController {
         i18n.onLocaleChange(this::applyTexts);
         applyTexts();
         refresh();
+
+        EventBus bus = app.pluginContext().getEventBus();
+        bus.subscribe("sync.completed", e -> Platform.runLater(this::refresh));
+        bus.subscribe("sync.failed", e -> Platform.runLater(() ->
+                reporter.reportWarning("Sync échouée : " + e)
+        ));
     }
 
     private void setupColumns() {
@@ -104,9 +114,8 @@ public class SyncController {
             reporter.reportWarning(i18n.t("sync.blocked"));
             return;
         }
-        service.markSynced();
-        reporter.reportInfo(i18n.t("sync.done"));
-        refresh();
+        app.pluginContext().getEventBus()
+                        .publish("sync.start", null);
     }
 
     @FXML

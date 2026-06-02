@@ -17,6 +17,7 @@ import tech.nabor.api.model.enums.UserRole;
 import tech.nabor.api.model.enums.Visibility;
 import tech.nabor.api.model.local.LocalAccount;
 import tech.nabor.api.model.user.User;
+import tech.nabor.app.AppNaborHttpClient;
 import tech.nabor.service.AuthService;
 import tech.nabor.ui.LoginController;
 import tech.nabor.ui.MainController;
@@ -75,6 +76,10 @@ public class NaborApp extends Application {
         ConnectedUser user = app.pluginContext().getConnectedUser();
         if (user instanceof MutableConnectedUser mutable) {
             mutable.connect(session.userId(), session.email(), session.role());
+        }
+
+        if (app.pluginContext().getHttpClient() instanceof AppNaborHttpClient httpClient) {
+            httpClient.setToken(session.accessToken());
         }
 
         ensureLocalUser(session);
