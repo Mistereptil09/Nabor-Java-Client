@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -26,6 +27,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.util.StringConverter;
 import tech.nabor.AppContext;
+import tech.nabor.api.EventBus;
 import tech.nabor.api.error.NaborException;
 import tech.nabor.api.error.NaborReporter;
 import tech.nabor.api.model.enums.IncidentSeverity;
@@ -34,17 +36,12 @@ import tech.nabor.api.model.incidents.Incident;
 import tech.nabor.service.IncidentService;
 import tech.nabor.ui.i18n.I18nManager;
 
-/**
- * Écran Incidents (§7.1 — {@code IncidentController}) : liste filtrable, détail
- * et création offline. Toutes les données proviennent de SQLite via
- * {@link IncidentService} → consultable et alimentable hors-ligne (§7.3).
- */
+
 public class IncidentsController {
 
     @FXML private Label screenTitle;
     @FXML private Label filterLabel;
     @FXML private ComboBox<String> statusFilter;
-    @FXML private Button refreshButton;
     @FXML private Button newButton;
     @FXML private TableView<Incident> table;
     @FXML private TableColumn<Incident, String> titleCol;
@@ -70,6 +67,11 @@ public class IncidentsController {
         setupColumns();
         table.getSelectionModel().selectedItemProperty()
                 .addListener((obs, old, selected) -> showDetail(selected));
+
+       
+        EventBus eventBus = app.pluginContext().getEventBus();
+        eventBus.subscribe(UiEvents.INCIDENTS_CHANGED,
+                payload -> Platform.runLater(this::reload));
 
         i18n.onLocaleChange(this::applyTexts);
         applyTexts();
@@ -102,7 +104,6 @@ public class IncidentsController {
     private void applyTexts() {
         screenTitle.setText(i18n.t("screen.incidents.title"));
         filterLabel.setText(i18n.t("incidents.filter"));
-        refreshButton.setText(i18n.t("incidents.refresh"));
         newButton.setText(i18n.t("incidents.new"));
         titleCol.setText(i18n.t("incidents.col.title"));
         severityCol.setText(i18n.t("incidents.col.severity"));
@@ -155,11 +156,6 @@ public class IncidentsController {
         boolean resolved = incident.status() == IncidentStatus.resolved;
         assignButton.setDisable(resolved);
         resolveButton.setDisable(resolved);
-    }
-
-    @FXML
-    private void onRefresh() {
-        reload();
     }
 
     @FXML

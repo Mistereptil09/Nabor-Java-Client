@@ -24,7 +24,6 @@
             <Label fx:id="screenTitle" styleClass="screen-title"/>
             <Label fx:id="filterLabel"/>
             <ComboBox fx:id="statusFilter"/>
-            <Button fx:id="refreshButton" onAction="#onRefresh"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button fx:id="newButton" onAction="#onNew" styleClass="accent-button"/>
         </HBox>

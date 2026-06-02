@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -14,6 +15,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import tech.nabor.AppContext;
+import tech.nabor.api.EventBus;
 import tech.nabor.api.error.NaborReporter;
 import tech.nabor.api.model.sync.PendingConflict;
 import tech.nabor.service.SyncService;
@@ -46,6 +48,10 @@ public class SyncController {
         this.reporter = app.pluginContext().getReporter();
 
         setupColumns();
+
+        EventBus eventBus = app.pluginContext().getEventBus();
+        eventBus.subscribe(UiEvents.SYNC_CHANGED, payload -> Platform.runLater(this::refresh));
+
         i18n.onLocaleChange(this::applyTexts);
         applyTexts();
         refresh();

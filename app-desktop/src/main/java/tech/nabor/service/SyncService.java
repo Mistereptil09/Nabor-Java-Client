@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import tech.nabor.api.EventBus;
 import tech.nabor.api.PluginContext;
 import tech.nabor.api.SqliteRepository;
 import tech.nabor.api.model.enums.IncidentSeverity;
@@ -13,6 +14,7 @@ import tech.nabor.api.model.incidents.Incident;
 import tech.nabor.api.model.sync.PendingConflict;
 import tech.nabor.api.model.sync.ResolvedConflict;
 import tech.nabor.api.model.sync.SyncState;
+import tech.nabor.ui.UiEvents;
 
 
 public class SyncService {
@@ -20,9 +22,11 @@ public class SyncService {
     public enum Choice { LOCAL, REMOTE }
 
     private final SqliteRepository db;
+    private final EventBus eventBus;
 
     public SyncService(PluginContext ctx) {
         this.db = ctx.getDb();
+        this.eventBus = ctx.getEventBus();
     }
 
 
@@ -78,8 +82,10 @@ public class SyncService {
 
         if (choice == Choice.REMOTE && "incidents".equals(conflict.tableName())) {
             applyRemoteToIncident(conflict.rowId(), conflict.fieldName(), conflict.remoteValue());
+            eventBus.publish(UiEvents.INCIDENTS_CHANGED, conflict.rowId());
         }
         db.pendingConflicts().delete(conflict.id());
+        eventBus.publish(UiEvents.SYNC_CHANGED, conflict.rowId());
     }
 
     private void applyRemoteToIncident(String id, String field, String remoteValue) {
@@ -102,6 +108,7 @@ public class SyncService {
         db.syncChangelog().markAllSynced();
         String token = db.syncState().get().map(SyncState::lastSyncToken).orElse(null);
         db.syncState().save(new SyncState(Instant.now(), token, false));
+        eventBus.publish(UiEvents.SYNC_CHANGED, null);
     }
 
    
@@ -120,6 +127,7 @@ public class SyncService {
         db.pendingConflicts().save(new PendingConflict(
                 0, "incidents", local.id(), "status",
                 local.status().name(), remoteStatus, Instant.now()));
+        eventBus.publish(UiEvents.SYNC_CHANGED, local.id());
         return true;
     }
 

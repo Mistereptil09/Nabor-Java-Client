@@ -2,16 +2,17 @@ package tech.nabor.ui;
 
 import java.util.Map;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import tech.nabor.AppContext;
+import tech.nabor.api.EventBus;
 import tech.nabor.api.model.enums.IncidentSeverity;
 import tech.nabor.api.model.enums.IncidentStatus;
 import tech.nabor.service.StatsService;
@@ -21,7 +22,6 @@ import tech.nabor.ui.i18n.I18nManager;
 public class StatisticsController {
 
     @FXML private Label screenTitle;
-    @FXML private Button refreshButton;
     @FXML private Label kpiIncidentsValue;
     @FXML private Label kpiIncidentsLabel;
     @FXML private Label kpiEventsValue;
@@ -37,12 +37,10 @@ public class StatisticsController {
         this.i18n = i18n;
         this.stats = new StatsService(app.pluginContext());
 
-        i18n.onLocaleChange(this::refresh);
-        refresh();
-    }
+        EventBus eventBus = app.pluginContext().getEventBus();
+        eventBus.subscribe(UiEvents.INCIDENTS_CHANGED, payload -> Platform.runLater(this::refresh));
 
-    @FXML
-    private void onRefresh() {
+        i18n.onLocaleChange(this::refresh);
         refresh();
     }
 
@@ -54,7 +52,6 @@ public class StatisticsController {
 
     private void applyTexts() {
         screenTitle.setText(i18n.t("screen.stats.title"));
-        refreshButton.setText(i18n.t("incidents.refresh"));
         kpiIncidentsLabel.setText(i18n.t("stats.kpi.incidents"));
         kpiEventsLabel.setText(i18n.t("stats.kpi.events"));
         kpiRegistrationsLabel.setText(i18n.t("stats.kpi.registrations"));
