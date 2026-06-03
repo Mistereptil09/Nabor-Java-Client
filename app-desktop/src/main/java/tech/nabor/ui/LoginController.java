@@ -1,7 +1,11 @@
 package tech.nabor.ui;
 
+import java.awt.Desktop;
+import java.net.URI;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
@@ -12,7 +16,6 @@ import javafx.util.Duration;
 import tech.nabor.service.AuthService;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.util.QRCodeUtil;
-
 
 public class LoginController {
 
@@ -26,6 +29,7 @@ public class LoginController {
     @FXML private ImageView qrImage;
     @FXML private Button refreshButton;
     @FXML private Button devLoginButton;
+    @FXML private Button openBrowserButton; // <-- N'oublie pas de l'ajouter dans ton .fxml
 
     private AuthService auth;
     private I18nManager i18n;
@@ -48,27 +52,44 @@ public class LoginController {
         subtitleLabel.setText(i18n.t("login.subtitle"));
         refreshButton.setText(i18n.t("login.refresh"));
         devLoginButton.setText(i18n.t("login.dev"));
+
+        // Si tu as une clé de traduction pour ce bouton :
+        if (openBrowserButton != null) {
+            openBrowserButton.setText("Ouvrir dans le navigateur");
+        }
     }
 
     private void startChallenge() {
         stopTimers();
 
-        challenge = auth.newChallenge();
-        qrImage.setImage(QRCodeUtil.generate(challenge.qrPayload(), QR_SIZE));
-        statusLabel.setText(i18n.t("login.status.waiting"));
+        try {
+            challenge = auth.newChallenge();
+            qrImage.setImage(QRCodeUtil.generate(challenge.qrPayload(), QR_SIZE));
+            statusLabel.setText(i18n.t("login.status.waiting"));
 
-        pollTimeline = new Timeline(new KeyFrame(POLL_INTERVAL, e -> poll()));
-        pollTimeline.setCycleCount(Timeline.INDEFINITE);
-        pollTimeline.play();
+            pollTimeline = new Timeline(new KeyFrame(POLL_INTERVAL, e -> poll()));
+            pollTimeline.setCycleCount(Timeline.INDEFINITE);
+            pollTimeline.play();
 
-        expiryTimeline = new Timeline(new KeyFrame(QR_TTL, e -> expire()));
-        expiryTimeline.play();
+            expiryTimeline = new Timeline(new KeyFrame(QR_TTL, e -> expire()));
+            expiryTimeline.play();
+        } catch (Exception e) {
+            e.printStackTrace();
+            statusLabel.setText("Erreur : " + e.getMessage());
+        }
     }
 
     private void poll() {
-        if (auth.pollStatus(challenge.tokenUuid()) == AuthService.Status.VALIDATED) {
-            stopTimers();
-        }
+        // Le CompletableFuture évite de geler JavaFX pendant la requête HTTP !
+        CompletableFuture.supplyAsync(() -> auth.pollStatus(challenge.tokenUuid()))
+                .thenAcceptAsync(result -> {
+                    if (result.status() == AuthService.Status.VALIDATED) {
+                        stopTimers();
+                        onAuthenticated.accept(result.session());
+                    } else if (result.status() == AuthService.Status.EXPIRED) {
+                        expire();
+                    }
+                }, Platform::runLater); // On retourne sur le Thread UI pour les mises à jour
     }
 
     private void expire() {
@@ -85,6 +106,20 @@ public class LoginController {
     private void onDevLogin() {
         stopTimers();
         onAuthenticated.accept(auth.simulateDevLogin());
+    }
+
+    @FXML
+    private void onOpenBrowser() {
+        if (challenge != null && challenge.scanUrl() != null) {
+            // On lance l'ouverture du navigateur dans un thread d'arrière-plan
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Desktop.getDesktop().browse(new URI(challenge.scanUrl()));
+                } catch (Exception e) {
+                    System.err.println("Impossible d'ouvrir le navigateur : " + e.getMessage());
+                }
+            });
+        }
     }
 
     private void stopTimers() {

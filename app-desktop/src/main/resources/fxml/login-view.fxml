@@ -26,6 +26,7 @@
 
         <Button fx:id="refreshButton" onAction="#onRefresh"/>
         <Button fx:id="devLoginButton" onAction="#onDevLogin" styleClass="dev-button"/>
+        <Button fx:id="openBrowserButton" onAction="#onOpenBrowser" styleClass="dev-button"/>
     </VBox>
 
 </StackPane>

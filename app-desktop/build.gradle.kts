@@ -54,4 +54,5 @@ dependencies {
 
     // Génération des QR codes SSO (QRCodeUtil) — rendu local en WritableImage.
     implementation("com.google.zxing:core:3.5.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
 }
