@@ -50,6 +50,10 @@ public class SyncController {
         this.reporter = app.pluginContext().getReporter();
 
         setupColumns();
+
+        EventBus eventBus = app.pluginContext().getEventBus();
+        eventBus.subscribe(UiEvents.SYNC_CHANGED, payload -> Platform.runLater(this::refresh));
+
         i18n.onLocaleChange(this::applyTexts);
         applyTexts();
         refresh();

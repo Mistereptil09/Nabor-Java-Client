@@ -6,32 +6,29 @@ import java.util.List;
 import java.util.UUID;
 
 import tech.nabor.api.ConnectedUser;
+import tech.nabor.api.EventBus;
 import tech.nabor.api.PluginContext;
 import tech.nabor.api.SqliteRepository;
 import tech.nabor.api.model.enums.IncidentSeverity;
 import tech.nabor.api.model.enums.IncidentStatus;
 import tech.nabor.api.model.incidents.Incident;
+import tech.nabor.ui.UiEvents;
 
-/**
- * Logique métier des incidents (§7.1 — {@code IncidentService}).
- *
- * <p>S'appuie sur le repository SQLite local : consultation et création
- * fonctionnent hors-ligne (offline-first, §7.3). La synchronisation des
- * créations/éditions vers NestJS est gérée séparément (étape 9).</p>
- */
+
 public class IncidentService {
 
     private static final int LIMIT = 200;
 
     private final SqliteRepository db;
     private final ConnectedUser user;
+    private final EventBus eventBus;
 
     public IncidentService(PluginContext ctx) {
         this.db = ctx.getDb();
         this.user = ctx.getConnectedUser();
+        this.eventBus = ctx.getEventBus();
     }
 
-    /** Liste les incidents ; {@code statusFilter == null} = tous statuts confondus. */
     public List<Incident> list(IncidentStatus statusFilter) {
         if (statusFilter != null) {
             return db.incidents().findByStatus(statusFilter, LIMIT);
@@ -46,12 +43,11 @@ public class IncidentService {
             if (ca == null && cb == null) return 0;
             if (ca == null) return 1;
             if (cb == null) return -1;
-            return cb.compareTo(ca); // plus récent d'abord
+            return cb.compareTo(ca); 
         });
         return all;
     }
 
-    /** Crée un incident localement (statut {@code open}, signalé par l'utilisateur courant). */
     public Incident create(String title, String description, IncidentSeverity severity) {
         Instant now = Instant.now();
         Incident incident = new Incident(
@@ -62,14 +58,17 @@ public class IncidentService {
                 severity, IncidentStatus.open,
                 null, now, now, null);
         db.incidents().save(incident);
+        eventBus.publish(UiEvents.INCIDENTS_CHANGED, incident.id());
         return incident;
     }
 
     public void assignToMe(String id) {
         db.incidents().assign(id, user.getUserId());
+        eventBus.publish(UiEvents.INCIDENTS_CHANGED, id);
     }
 
     public void resolve(String id) {
         db.incidents().resolve(id);
+        eventBus.publish(UiEvents.INCIDENTS_CHANGED, id);
     }
 }

@@ -75,6 +75,10 @@
 .danger-button:hover { -fx-background-color: derive(-nabor-error, -10%); }
 
 /* ── Statistiques (étape 8) ──────────────────────────────── */
+/* ScrollPane transparent pour rester cohérent avec le thème. */
+.content-area > .viewport { -fx-background-color: transparent; }
+.scroll-pane { -fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; }
+
 .kpi-card {
     -fx-background-color: -nabor-surface;
     -fx-background-radius: 10;
@@ -96,6 +100,87 @@
     -fx-background-radius: 6;
     -fx-cursor: hand;
 }
+
+/* ── Contrôles JavaFX standards : rendre lisibles dans tous les thèmes ──── */
+
+/* Graphiques : titres, axes, légendes suivent la couleur du thème. */
+.chart { -fx-background-color: transparent; }
+.chart-title { -fx-text-fill: -nabor-text; -fx-font-size: 14px; -fx-font-weight: bold; }
+.axis { -fx-tick-label-fill: -nabor-text-muted; }
+.axis-label { -fx-text-fill: -nabor-text; }
+.chart-legend {
+    -fx-background-color: -nabor-surface;
+    -fx-background-radius: 8;
+}
+.chart-legend-item { -fx-text-fill: -nabor-text; }
+/* Le fond du tracé reste clair pour la lisibilité des barres/lignes. */
+.chart-plot-background { -fx-background-color: derive(-nabor-surface, 20%); }
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines {
+    -fx-stroke: derive(-nabor-text-muted, 60%);
+}
+/* Étiquettes du camembert (Faible, Moyenne…) + leurs lignes de repère. */
+.chart-pie-label { -fx-fill: -nabor-text; -fx-font-size: 12px; }
+.chart-pie-label-line { -fx-stroke: -nabor-text-muted; }
+
+/* Tables : en-têtes, cellules, fond. */
+.table-view {
+    -fx-background-color: -nabor-surface;
+    -fx-table-cell-border-color: derive(-nabor-text-muted, 60%);
+}
+/* Modena dessine un dégradé clair sur ces 3 sous-régions : on les aplatit. */
+.table-view .column-header-background,
+.table-view .column-header,
+.table-view .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: derive(-nabor-primary, 20%);
+}
+.table-view .column-header .label { -fx-text-fill: white; -fx-font-weight: bold; }
+.table-view .column-header .arrow { -fx-background-color: white; }
+.table-view .table-cell { -fx-text-fill: -nabor-text; }
+.table-row-cell { -fx-background-color: -nabor-bg; }
+.table-row-cell:odd { -fx-background-color: derive(-nabor-surface, 3%); }
+.table-row-cell:selected { -fx-background-color: derive(-nabor-primary, 30%); }
+.table-row-cell:selected .table-cell { -fx-text-fill: white; }
+/* Lignes vides : même fond que la table (évite les rayures blanches en sombre). */
+.table-row-cell:empty { -fx-background-color: -nabor-surface; }
+
+/* ComboBox & listes déroulantes. */
+.combo-box, .choice-box {
+    -fx-background-color: -nabor-surface;
+    -fx-mark-color: -nabor-text;
+}
+.combo-box .list-cell { -fx-text-fill: -nabor-text; -fx-background-color: -nabor-surface; }
+.combo-box-popup .list-view { -fx-background-color: -nabor-surface; }
+.combo-box-popup .list-cell { -fx-text-fill: -nabor-text; }
+.combo-box-popup .list-cell:hover { -fx-background-color: derive(-nabor-primary, 40%); -fx-text-fill: white; }
+
+/* ColorPicker : champ + texte hex. */
+.color-picker {
+    -fx-background-color: -nabor-surface;
+    -fx-mark-color: -nabor-text;
+}
+.color-picker > .label { -fx-text-fill: -nabor-text; }
+.color-picker .color-picker-label .text { -fx-fill: -nabor-text; }
+
+/* Slider. */
+.slider .track { -fx-background-color: derive(-nabor-text-muted, 40%); }
+.slider .thumb { -fx-background-color: -nabor-primary; }
+.slider .axis { -fx-tick-label-fill: -nabor-text-muted; }
+
+/* Boîtes de dialogue (création d'incident, confirmation). */
+.dialog-pane { -fx-background-color: -nabor-bg; }
+.dialog-pane .label { -fx-text-fill: -nabor-text; }
+.dialog-pane .header-panel { -fx-background-color: -nabor-surface; }
+.dialog-pane .header-panel .label { -fx-text-fill: -nabor-text; }
+.text-field, .text-area {
+    -fx-background-color: -nabor-surface;
+    -fx-text-fill: -nabor-text;
+    -fx-prompt-text-fill: -nabor-text-muted;
+}
+.text-area .content { -fx-background-color: -nabor-surface; }
+
+/* Séparateurs. */
+.separator .line { -fx-border-color: derive(-nabor-text-muted, 50%); }
 
 /* ── Toasts (étape 3) ────────────────────────────────────── */
 .toast {

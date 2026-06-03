@@ -90,8 +90,8 @@ public class NaborApp extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view.fxml"));
             Parent root = loader.load();
             MainController controller = loader.getController();
+            controller.setThemeManager(theme); // avant init : dispo pour les écrans
             controller.init(app, i18n);
-            controller.setThemeManager(theme);
             contentHolder.getChildren().setAll(root);
         } catch (Exception e) {
             app.pluginContext().getReporter().reportError(new NaborException(
