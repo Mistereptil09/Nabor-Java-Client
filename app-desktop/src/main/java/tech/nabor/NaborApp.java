@@ -24,6 +24,12 @@ import tech.nabor.ui.MainController;
 import tech.nabor.ui.UiNaborReporter;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.theme.ThemeManager;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Base64;
+import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 
 public class NaborApp extends Application {
@@ -32,6 +38,8 @@ public class NaborApp extends Application {
     private I18nManager i18n;
     private ThemeManager theme;
     private StackPane contentHolder;
+    private AuthService authService;
+    private String refreshToken;
 
     @Override
     public void init() {
@@ -56,33 +64,68 @@ public class NaborApp extends Application {
 
         i18n = new I18nManager(app.settings());
 
-        showLogin();
+        List<LocalAccount> accounts = app.pluginContext().getDb()
+                .localAccounts().findAll();
+        showLogin(accounts);
 
         stage.setTitle("Nabor Services");
         stage.setScene(scene);
         stage.show();
     }
 
-    private void showLogin() throws Exception {
-        AuthService auth = new AuthService(app.pluginContext().getHttpClient());
+    private void deleteAccount(LocalAccount account) {
+        app.pluginContext().getDb().localAccounts().delete(account.userId());
+    }
+
+    private void disconnect() {
+        if (app.pluginContext().getHttpClient() instanceof AppNaborHttpClient httpClient) {
+            httpClient.setToken(null);
+        }
+        refreshToken = null;
+
+        try {
+            List<LocalAccount> accounts = app.pluginContext().getDb()
+                    .localAccounts().findAll();
+            showLogin(accounts);
+        } catch (Exception e) {
+            System.err.println("[Auth] Failed to return to login: " + e.getMessage());
+        }
+    }
+
+    private void showLogin(List<LocalAccount> accounts) throws Exception {
+        authService = new AuthService(app.pluginContext().getHttpClient());
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login-view.fxml"));
         Parent root = loader.load();
         LoginController controller = loader.getController();
-        controller.init(auth, i18n, this::onAuthenticated);
+        controller.init(authService, i18n, this::onAuthenticated, this::deleteAccount, accounts);
         contentHolder.getChildren().setAll(root);
     }
 
     private void onAuthenticated(AuthService.Session session) {
-        ConnectedUser user = app.pluginContext().getConnectedUser();
-        if (user instanceof MutableConnectedUser mutable) {
-            mutable.connect(session.userId(), session.email(), session.role());
-        }
-
         if (app.pluginContext().getHttpClient() instanceof AppNaborHttpClient httpClient) {
             httpClient.setToken(session.accessToken());
+            this.refreshToken = session.refreshToken();
+            // Wire auto-refresh on 401
+            if (session.refreshToken() != null && !session.refreshToken().isBlank()) {
+                httpClient.setTokenRefresher(() -> {
+                    System.out.println("[Auth] Token expired, refreshing...");
+                    var newSession = authService.refresh(refreshToken);
+                    // Store the rotated refresh token from server
+                    refreshToken = newSession.refreshToken();
+                    System.out.println("[Auth] Token refreshed successfully");
+                    return newSession.accessToken();
+                });
+            }
         }
 
-        ensureLocalUser(session);
+        User profileUser = fetchUserProfile(session.accessToken());
+
+        ConnectedUser user = app.pluginContext().getConnectedUser();
+        if (user instanceof MutableConnectedUser mutable) {
+            mutable.connect(profileUser.id(), profileUser.email(), profileUser.role().name());
+        }
+
+        ensureLocalUser(profileUser);
 
         app.registry().loadAll(app.pluginContext());
 
@@ -90,7 +133,8 @@ public class NaborApp extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-view.fxml"));
             Parent root = loader.load();
             MainController controller = loader.getController();
-            controller.setThemeManager(theme); // avant init : dispo pour les écrans
+            controller.setThemeManager(theme);
+            controller.setOnDisconnect(this::disconnect);
             controller.init(app, i18n);
             contentHolder.getChildren().setAll(root);
         } catch (Exception e) {
@@ -99,24 +143,97 @@ public class NaborApp extends Application {
         }
     }
 
-  
-    private void ensureLocalUser(AuthService.Session session) {
-        SqliteRepository db = app.pluginContext().getDb();
-        if (db.users().findById(session.userId()).isPresent()) {
-            return;
+    private User fetchUserProfile(String token) {
+        if ("dev-access-token".equals(token)) {
+            return new User(
+                    "dev-admin-001", "Dev", "Admin", "admin@nabor.tech",
+                    "", null, null, null,
+                    Visibility.public_, null, MessagePolicy.open, i18n.locale(),
+                    null, null, UserRole.admin,
+                    Instant.now(), null, Instant.now(), null, null);
         }
-        Instant now = Instant.now();
-        db.users().save(new User(
-                session.userId(), "Dev", "Admin", session.email(),
-                "", null, null, null,
-                Visibility.public_, null, MessagePolicy.open, i18n.locale(),
-                null, null, UserRole.valueOf(session.role()),
-                now, null, now, null, null));
+
+        try {
+            String profileJson = app.pluginContext().getHttpClient().get("/users/me");
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode profile = mapper.readTree(profileJson);
+
+            String userId = profile.path("id").asText();
+            String firstName = profile.path("firstName").asText();
+            String lastName = profile.path("lastName").asText();
+            String email = profile.path("email").asText();
+
+            String roleStr = profile.path("role").asText("resident").toLowerCase();
+            UserRole userRole = switch (roleStr) {
+                case "admin" -> UserRole.admin;
+                case "moderator" -> UserRole.moderator;
+                case "neighbourhood_rep" -> UserRole.neighbourhood_rep;
+                default -> UserRole.resident;
+            };
+
+            return new User(
+                    userId, firstName, lastName, email,
+                    "", null, null, null,
+                    Visibility.public_, null, MessagePolicy.open, i18n.locale(),
+                    null, null, userRole,
+                    Instant.now(), null, Instant.now(), null, null);
+        } catch (Exception e) {
+            System.err.println("Failed to fetch user profile, using local/offline fallback: " + e.getMessage());
+            try {
+                String[] parts = token.split("\\.");
+                if (parts.length >= 2) {
+                    String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode payload = mapper.readTree(payloadJson);
+                    String userId = payload.path("sub").asText();
+
+                    Optional<User> local = app.pluginContext().getDb().users().findById(userId);
+                    if (local.isPresent()) {
+                        return local.get();
+                    }
+
+                    String roleStr = payload.path("role").asText("resident").toLowerCase();
+                    UserRole userRole = switch (roleStr) {
+                        case "admin" -> UserRole.admin;
+                        case "moderator" -> UserRole.moderator;
+                        case "neighbourhood_rep" -> UserRole.neighbourhood_rep;
+                        default -> UserRole.resident;
+                    };
+                    String locale = payload.path("locale").asText("fr");
+                    return new User(
+                            userId, "Offline", "User", userId + "@offline.nabor.tech",
+                            "", null, null, null,
+                            Visibility.public_, null, MessagePolicy.open, locale,
+                            null, null, userRole,
+                            Instant.now(), null, Instant.now(), null, null);
+                }
+            } catch (Exception ex) {
+                // Ignore and use final fallback
+            }
+
+            return new User(
+                    "2", "Offline", "Fallback", "fallback@nabor.tech",
+                    "", null, null, null,
+                    Visibility.public_, null, MessagePolicy.open, i18n.locale(),
+                    null, null, UserRole.resident,
+                    Instant.now(), null, Instant.now(), null, null);
+        }
+    }
+
+    private void ensureLocalUser(User profileUser) {
+        SqliteRepository db = app.pluginContext().getDb();
+
+        String displayName = (profileUser.firstName() + " " + profileUser.lastName()).trim();
+        if (displayName.isEmpty()) {
+            displayName = "User " + profileUser.id();
+        }
 
         db.localAccounts().save(new LocalAccount(
-                session.userId(), session.email(), "Dev Admin", true, now));
-        db.localAccounts().setActive(session.userId());
+                profileUser.id(), profileUser.email(), displayName, true,
+                Instant.now(), refreshToken));
+        db.localAccounts().setActive(profileUser.id());
     }
+
 
     @Override
     public void stop() {

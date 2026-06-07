@@ -30,7 +30,8 @@ public class AppLocalAccountRepository implements LocalAccountRepository {
                     rs.getString("email"),
                     rs.getString("display_name"),
                     rs.getInt("is_active") == 1,
-                    InstantMapper.fromNullableLong(rs, "last_login_at")
+                    InstantMapper.fromNullableLong(rs, "last_login_at"),
+                    rs.getString("refresh_token")
             );
         }
     }
@@ -69,19 +70,21 @@ public class AppLocalAccountRepository implements LocalAccountRepository {
     public void save(LocalAccount account) {
         jdbi.useHandle(h ->
                 h.createUpdate("""
-                INSERT INTO local_accounts (user_id, email, display_name, is_active, last_login_at)
-                VALUES (:userId, :email, :displayName, :isActive, :lastLoginAt)
+                INSERT INTO local_accounts (user_id, email, display_name, is_active, last_login_at, refresh_token)
+                VALUES (:userId, :email, :displayName, :isActive, :lastLoginAt, :refreshToken)
                 ON CONFLICT(user_id) DO UPDATE SET
                     email         = excluded.email,
                     display_name  = excluded.display_name,
                     is_active     = excluded.is_active,
-                    last_login_at = excluded.last_login_at
+                    last_login_at = excluded.last_login_at,
+                    refresh_token = excluded.refresh_token
                 """)
                         .bind("userId",      account.userId())
                         .bind("email",       account.email())
                         .bind("displayName", account.displayName())
                         .bind("isActive",    account.isActive() ? 1 : 0)
-                        .bind("lastLoginAt", InstantMapper.toLong(account.lastLoginAt()))
+                        .bind("lastLoginAt",  InstantMapper.toLong(account.lastLoginAt()))
+                        .bind("refreshToken", account.refreshToken())
                         .execute()
         );
     }

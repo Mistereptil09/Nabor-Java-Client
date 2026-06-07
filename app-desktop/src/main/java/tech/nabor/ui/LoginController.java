@@ -2,6 +2,7 @@ package tech.nabor.ui;
 
 import java.awt.Desktop;
 import java.net.URI;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -9,10 +10,15 @@ import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import tech.nabor.api.model.local.LocalAccount;
 import tech.nabor.service.AuthService;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.util.QRCodeUtil;
@@ -29,38 +35,142 @@ public class LoginController {
     @FXML private ImageView qrImage;
     @FXML private Button refreshButton;
     @FXML private Button devLoginButton;
-    @FXML private Button openBrowserButton; // <-- N'oublie pas de l'ajouter dans ton .fxml
+    @FXML private Button openBrowserButton;
 
     private AuthService auth;
     private I18nManager i18n;
     private Consumer<AuthService.Session> onAuthenticated;
+    private Consumer<LocalAccount> onDeleteAccount;
+    private List<LocalAccount> accounts;
+
+    // Picker UI (built programmatically)
+    private VBox pickerBox;
 
     private AuthService.QrChallenge challenge;
     private Timeline pollTimeline;
     private Timeline expiryTimeline;
 
-    public void init(AuthService auth, I18nManager i18n, Consumer<AuthService.Session> onAuthenticated) {
+    // ── Init ──────────────────────────────────────────────────────────────────
+
+    /** Show account picker if accounts exist, otherwise show QR login. */
+    public void init(AuthService auth, I18nManager i18n,
+                     Consumer<AuthService.Session> onAuthenticated,
+                     Consumer<LocalAccount> onDeleteAccount,
+                     List<LocalAccount> accounts) {
         this.auth = auth;
         this.i18n = i18n;
         this.onAuthenticated = onAuthenticated;
+        this.onDeleteAccount = onDeleteAccount;
+        this.accounts = accounts != null ? accounts : List.of();
         applyTexts();
-        startChallenge();
-    }
 
-    private void applyTexts() {
-        titleLabel.setText(i18n.t("login.title"));
-        subtitleLabel.setText(i18n.t("login.subtitle"));
-        refreshButton.setText(i18n.t("login.refresh"));
-        devLoginButton.setText(i18n.t("login.dev"));
-
-        // Si tu as une clé de traduction pour ce bouton :
-        if (openBrowserButton != null) {
-            openBrowserButton.setText("Ouvrir dans le navigateur");
+        if (!this.accounts.isEmpty()) {
+            showPicker();
+        } else {
+            startChallenge();
         }
     }
 
+    // ── Account picker ──────────────────────────────────────────────────────
+
+    private void showPicker() {
+        titleLabel.setText(i18n.t("login.picker.title"));
+        subtitleLabel.setText(i18n.t("login.picker.subtitle"));
+        hideQrElements();
+
+        pickerBox = new VBox(10);
+        pickerBox.setPadding(new Insets(16, 0, 16, 0));
+
+        for (LocalAccount a : accounts) {
+            Button loginBtn = new Button(a.displayName() + "  (" + a.email() + ")");
+            loginBtn.setMaxWidth(Double.MAX_VALUE);
+            loginBtn.getStyleClass().add("nav-button");
+            loginBtn.setOnAction(e -> tryLogin(a));
+
+            Button delBtn = new Button("✕");
+            delBtn.getStyleClass().add("danger-button");
+            delBtn.setOnAction(e -> deleteAccount(a));
+
+            HBox row = new HBox(6, loginBtn, delBtn);
+            HBox.setHgrow(loginBtn, Priority.ALWAYS);
+            pickerBox.getChildren().add(row);
+        }
+
+        Button newBtn = new Button(i18n.t("login.picker.new"));
+        newBtn.setMaxWidth(Double.MAX_VALUE);
+        newBtn.getStyleClass().add("accent-button");
+        newBtn.setOnAction(e -> startChallenge());
+        pickerBox.getChildren().add(newBtn);
+
+        // Insert the picker before the dev button in the parent VBox
+        VBox parent = (VBox) titleLabel.getParent();
+        int idx = parent.getChildren().indexOf(devLoginButton);
+        parent.getChildren().add(idx, pickerBox);
+    }
+
+    private void deleteAccount(LocalAccount account) {
+        if (onDeleteAccount != null) {
+            onDeleteAccount.accept(account);
+        }
+        // Remove from local list and rebuild the picker
+        accounts = accounts.stream()
+                .filter(a -> !a.userId().equals(account.userId()))
+                .toList();
+        if (accounts.isEmpty()) {
+            hidePicker();
+            startChallenge();
+        } else {
+            // Rebuild picker
+            pickerBox.getChildren().clear();
+            for (LocalAccount a : accounts) {
+                Button loginBtn = new Button(a.displayName() + "  (" + a.email() + ")");
+                loginBtn.setMaxWidth(Double.MAX_VALUE);
+                loginBtn.getStyleClass().add("nav-button");
+                loginBtn.setOnAction(e -> tryLogin(a));
+
+                Button delBtn = new Button("✕");
+                delBtn.getStyleClass().add("danger-button");
+                delBtn.setOnAction(e -> deleteAccount(a));
+
+                HBox row = new HBox(6, loginBtn, delBtn);
+                HBox.setHgrow(loginBtn, Priority.ALWAYS);
+                pickerBox.getChildren().add(row);
+            }
+            Button newBtn = new Button(i18n.t("login.picker.new"));
+            newBtn.setMaxWidth(Double.MAX_VALUE);
+            newBtn.getStyleClass().add("accent-button");
+            newBtn.setOnAction(e -> startChallenge());
+            pickerBox.getChildren().add(newBtn);
+        }
+    }
+
+    private void tryLogin(LocalAccount account) {
+        statusLabel.setText(i18n.t("login.status.connecting"));
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return auth.refresh(account.refreshToken());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).thenAccept(session -> Platform.runLater(() -> {
+            statusLabel.setText("");
+            onAuthenticated.accept(session);
+        })).exceptionally(ex -> {
+            Platform.runLater(() ->
+                    statusLabel.setText(i18n.t("login.status.refresh_failed")));
+            return null;
+        });
+    }
+
+    // ── QR challenge ────────────────────────────────────────────────────────
+
     private void startChallenge() {
         stopTimers();
+        hidePicker();
+        showQrElements();
+
+        titleLabel.setText(i18n.t("login.title"));
+        subtitleLabel.setText(i18n.t("login.subtitle"));
 
         try {
             challenge = auth.newChallenge();
@@ -75,21 +185,29 @@ public class LoginController {
             expiryTimeline.play();
         } catch (Exception e) {
             e.printStackTrace();
-            statusLabel.setText("Erreur : " + e.getMessage());
+            statusLabel.setText("Error: " + e.getMessage());
         }
     }
 
     private void poll() {
-        // Le CompletableFuture évite de geler JavaFX pendant la requête HTTP !
         CompletableFuture.supplyAsync(() -> auth.pollStatus(challenge.tokenUuid()))
-                .thenAcceptAsync(result -> {
-                    if (result.status() == AuthService.Status.VALIDATED) {
-                        stopTimers();
-                        onAuthenticated.accept(result.session());
-                    } else if (result.status() == AuthService.Status.EXPIRED) {
-                        expire();
+                .thenAccept(result -> Platform.runLater(() -> {
+                    try {
+                        if (result.status() == AuthService.Status.VALIDATED) {
+                            stopTimers();
+                            onAuthenticated.accept(result.session());
+                        } else if (result.status() == AuthService.Status.EXPIRED) {
+                            expire();
+                        }
+                    } catch (Exception ex) {
+                        statusLabel.setText("Redirection error: " + ex.getMessage());
                     }
-                }, Platform::runLater); // On retourne sur le Thread UI pour les mises à jour
+                }))
+                .exceptionally(ex -> {
+                    Platform.runLater(() ->
+                            statusLabel.setText("Polling error: " + ex.getMessage()));
+                    return null;
+                });
     }
 
     private void expire() {
@@ -97,37 +215,69 @@ public class LoginController {
         statusLabel.setText(i18n.t("login.status.expired"));
     }
 
-    @FXML
-    private void onRefresh() {
-        startChallenge();
+    // ── UI toggles ───────────────────────────────────────────────────────────
+
+    private void hidePicker() {
+        if (pickerBox != null) {
+            pickerBox.setVisible(false);
+            pickerBox.setManaged(false);
+        }
     }
 
-    @FXML
-    private void onDevLogin() {
+    private void hideQrElements() {
+        qrImage.setVisible(false);
+        qrImage.setManaged(false);
+        refreshButton.setVisible(false);
+        refreshButton.setManaged(false);
+        if (openBrowserButton != null) {
+            openBrowserButton.setVisible(false);
+            openBrowserButton.setManaged(false);
+        }
+    }
+
+    private void showQrElements() {
+        qrImage.setVisible(true);
+        qrImage.setManaged(true);
+        refreshButton.setVisible(true);
+        refreshButton.setManaged(true);
+        if (openBrowserButton != null) {
+            openBrowserButton.setVisible(true);
+            openBrowserButton.setManaged(true);
+        }
+    }
+
+    // ── Button actions ───────────────────────────────────────────────────────
+
+    @FXML private void onRefresh() { startChallenge(); }
+
+    @FXML private void onDevLogin() {
         stopTimers();
         onAuthenticated.accept(auth.simulateDevLogin());
     }
 
-    @FXML
-    private void onOpenBrowser() {
+    @FXML private void onOpenBrowser() {
         if (challenge != null && challenge.scanUrl() != null) {
-            // On lance l'ouverture du navigateur dans un thread d'arrière-plan
             CompletableFuture.runAsync(() -> {
-                try {
-                    Desktop.getDesktop().browse(new URI(challenge.scanUrl()));
-                } catch (Exception e) {
-                    System.err.println("Impossible d'ouvrir le navigateur : " + e.getMessage());
+                try { Desktop.getDesktop().browse(new URI(challenge.scanUrl())); }
+                catch (Exception e) {
+                    System.err.println("Cannot open browser: " + e.getMessage());
                 }
             });
         }
     }
 
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
     private void stopTimers() {
-        if (pollTimeline != null) {
-            pollTimeline.stop();
-        }
-        if (expiryTimeline != null) {
-            expiryTimeline.stop();
-        }
+        if (pollTimeline != null) pollTimeline.stop();
+        if (expiryTimeline != null) expiryTimeline.stop();
+    }
+
+    private void applyTexts() {
+        titleLabel.setText(i18n.t("login.title"));
+        subtitleLabel.setText(i18n.t("login.subtitle"));
+        refreshButton.setText(i18n.t("login.refresh"));
+        devLoginButton.setText(i18n.t("login.dev"));
+        if (openBrowserButton != null) openBrowserButton.setText("Open in browser");
     }
 }
