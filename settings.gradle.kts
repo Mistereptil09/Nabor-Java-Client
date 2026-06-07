@@ -11,3 +11,4 @@ include("app-desktop")
 // plugins
 include("plugins:sync")
 include("plugins:test-plugin")
+include("plugins:resolver")
