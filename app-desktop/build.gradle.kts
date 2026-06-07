@@ -51,8 +51,27 @@ dependencies {
     implementation(project(":core-impl"))
     runtimeOnly(project(":plugins:test-plugin"))
     runtimeOnly(project(":plugins:sync")) // core plugin
+    runtimeOnly(project(":plugins:resolver"))
 
     // Génération des QR codes SSO (QRCodeUtil) — rendu local en WritableImage.
     implementation("com.google.zxing:core:3.5.3")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
+}
+
+// ── E2E tests ───────────────────────────────────────────────────────────────
+// Run with: ./gradlew :app-desktop:e2eTest -Dnabor.test.token=<jwt> -Dnabor.test.baseUrl=<url>
+tasks.register<Test>("e2eTest") {
+    description = "Runs end-to-end tests against a running Nabor API"
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    // Forward system properties to the test JVM (evaluated at config time)
+    systemProperty("nabor.test.token", System.getProperty("nabor.test.token", ""))
+    systemProperty("nabor.test.baseUrl", System.getProperty("nabor.test.baseUrl", ""))
+    useJUnitPlatform { includeTags("e2e") }
+    shouldRunAfter("test")
+}
+
+tasks.test {
+    useJUnitPlatform { excludeTags("e2e") }
 }
