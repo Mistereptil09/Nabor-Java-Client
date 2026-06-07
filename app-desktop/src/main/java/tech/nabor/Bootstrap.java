@@ -36,7 +36,8 @@ public final class Bootstrap {
         SqliteRepository db = new AppSqliteRepository(dbManager);
 
         EventBus eventBus = new AppEventBus();
-        NaborHttpClient httpClient = new AppNaborHttpClient();
+        AppNaborHttpClient httpClient = new AppNaborHttpClient();
+        httpClient.setEventBus(eventBus);
         
         NaborReporter reporter = new UiNaborReporter(new AppNaborReporter());
 

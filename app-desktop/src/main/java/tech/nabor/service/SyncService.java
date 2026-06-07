@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import tech.nabor.api.EventBus;
+import tech.nabor.api.NaborHttpClient;
 import tech.nabor.api.PluginContext;
 import tech.nabor.api.SqliteRepository;
 import tech.nabor.api.model.enums.IncidentSeverity;
@@ -22,10 +23,12 @@ public class SyncService {
     public enum Choice { LOCAL, REMOTE }
 
     private final SqliteRepository db;
+    private final NaborHttpClient http;
     private final EventBus eventBus;
 
     public SyncService(PluginContext ctx) {
         this.db = ctx.getDb();
+        this.http = ctx.getHttpClient();
         this.eventBus = ctx.getEventBus();
     }
 
@@ -100,7 +103,8 @@ public class SyncService {
                 field.equals("description") ? remoteValue : i.description(),
                 field.equals("severity") ? IncidentSeverity.valueOf(remoteValue) : i.severity(),
                 field.equals("status") ? IncidentStatus.valueOf(remoteValue) : i.status(),
-                i.assignedAt(), i.createdAt(), Instant.now(), i.resolvedAt());
+                i.assignedAt(), i.createdAt(), Instant.now(), i.resolvedAt(),
+                i.baseUpdatedAt(), i.syncedAt(), i.isDirty());
         db.incidents().save(updated);
     }
 
@@ -124,9 +128,12 @@ public class SyncService {
         String remoteStatus = local.status() == IncidentStatus.resolved
                 ? IncidentStatus.open.name() : IncidentStatus.resolved.name();
 
+        // Store as JSON objects matching the server conflict response format
+        String localJson = "{\"status\":\"" + local.status().name() + "\"}";
+        String remoteJson = "{\"status\":\"" + remoteStatus + "\"}";
         db.pendingConflicts().save(new PendingConflict(
                 0, "incidents", local.id(), "status",
-                local.status().name(), remoteStatus, Instant.now()));
+                localJson, remoteJson, Instant.now()));
         eventBus.publish(UiEvents.SYNC_CHANGED, local.id());
         return true;
     }

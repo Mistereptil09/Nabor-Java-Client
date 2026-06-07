@@ -56,7 +56,9 @@ public class IncidentService {
                 null, null, null,
                 title, description,
                 severity, IncidentStatus.open,
-                null, now, now, null);
+                null, now, now, null,
+                null, null, true  // baseUpdatedAt=null, syncedAt=null, isDirty=true
+        );
         db.incidents().save(incident);
         eventBus.publish(UiEvents.INCIDENTS_CHANGED, incident.id());
         return incident;
