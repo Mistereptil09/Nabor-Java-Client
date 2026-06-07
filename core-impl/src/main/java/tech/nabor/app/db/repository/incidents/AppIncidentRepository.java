@@ -40,7 +40,10 @@ public class AppIncidentRepository implements IncidentRepository {
                     InstantMapper.fromNullableLong(rs, "assigned_at"),
                     InstantMapper.fromNullableLong(rs, "created_at"),
                     InstantMapper.fromNullableLong(rs, "updated_at"),
-                    InstantMapper.fromNullableLong(rs, "resolved_at")
+                    InstantMapper.fromNullableLong(rs, "resolved_at"),
+                    rs.getString("base_updated_at"),
+                    InstantMapper.fromNullableLong(rs, "synced_at"),
+                    rs.getInt("is_dirty") == 1
             );
         }
     }
@@ -157,11 +160,13 @@ public class AppIncidentRepository implements IncidentRepository {
                 INSERT INTO incidents (
                     id, reporter_id, assigned_to, neighbourhood_id, mongo_document_id,
                     title, description, severity, status, assigned_at,
-                    created_at, updated_at, resolved_at
+                    created_at, updated_at, resolved_at,
+                    base_updated_at, synced_at, is_dirty
                 ) VALUES (
                     :id, :reporterId, :assignedTo, :neighbourhoodId, :mongoDocumentId,
                     :title, :description, :severity, :status, :assignedAt,
-                    :createdAt, :updatedAt, :resolvedAt
+                    :createdAt, :updatedAt, :resolvedAt,
+                    :baseUpdatedAt, :syncedAt, :isDirty
                 )
                 ON CONFLICT(id) DO UPDATE SET
                     assigned_to       = excluded.assigned_to,
@@ -173,7 +178,10 @@ public class AppIncidentRepository implements IncidentRepository {
                     status            = excluded.status,
                     assigned_at       = excluded.assigned_at,
                     updated_at        = excluded.updated_at,
-                    resolved_at       = excluded.resolved_at
+                    resolved_at       = excluded.resolved_at,
+                    base_updated_at   = excluded.base_updated_at,
+                    synced_at         = excluded.synced_at,
+                    is_dirty          = excluded.is_dirty
                 """)
                         .bind("id",               incident.id())
                         .bind("reporterId",       incident.reporterId())
@@ -188,7 +196,19 @@ public class AppIncidentRepository implements IncidentRepository {
                         .bind("createdAt",        InstantMapper.toLong(incident.createdAt()))
                         .bind("updatedAt",        InstantMapper.toLong(incident.updatedAt()))
                         .bind("resolvedAt",       InstantMapper.toLong(incident.resolvedAt()))
+                        .bind("baseUpdatedAt",    incident.baseUpdatedAt())
+                        .bind("syncedAt",         InstantMapper.toLong(incident.syncedAt()))
+                        .bind("isDirty",          incident.isDirty() ? 1 : 0)
                         .execute()
+        );
+    }
+
+    @Override
+    public List<Incident> findDirty() {
+        return jdbi.withHandle(h ->
+                h.createQuery("SELECT * FROM incidents WHERE is_dirty = 1 ORDER BY created_at DESC")
+                        .map(new IncidentMapper())
+                        .list()
         );
     }
 

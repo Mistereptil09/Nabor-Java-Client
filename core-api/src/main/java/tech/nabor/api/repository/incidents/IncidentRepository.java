@@ -15,6 +15,7 @@ public interface IncidentRepository {
     List<Incident> findByStatus(IncidentStatus status, int limit);
     List<Incident> findBySeverity(IncidentSeverity severity, int limit);
     List<Incident> findOpen(String neighbourhoodId, int limit);  // status = open or in_progress
+    List<Incident> findDirty();                                  // is_dirty = 1 — needs push
     void save(Incident incident);
     void assign(String id, String userId);               // changes assigned_to + assigned_at
     void resolve(String id);                             // changes status = resolved + resolved_at

@@ -341,7 +341,10 @@ CREATE TABLE IF NOT EXISTS incidents (
                            assigned_at       INTEGER,
                            created_at        INTEGER NOT NULL,
                            updated_at        INTEGER,
-                           resolved_at       INTEGER
+                           resolved_at       INTEGER,
+                           base_updated_at   TEXT,     -- server updatedAt from last snapshot
+                           synced_at         INTEGER,  -- last successful push timestamp
+                           is_dirty          INTEGER NOT NULL DEFAULT 0  -- 1 = modified offline
 );
 
 -- ============================================================
@@ -353,8 +356,8 @@ CREATE TABLE IF NOT EXISTS local_accounts (
                                 email         TEXT    NOT NULL,
                                 display_name  TEXT    NOT NULL,
                                 is_active     INTEGER NOT NULL DEFAULT 0,
-                                last_login_at INTEGER
-                                -- TODO add token for identification
+                                last_login_at INTEGER,
+                                refresh_token TEXT     -- for auto-login between reboots
 );
 
 CREATE TABLE IF NOT EXISTS app_locale_config (
@@ -404,9 +407,9 @@ CREATE TABLE IF NOT EXISTS pending_conflicts (
                                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
                                    table_name     TEXT    NOT NULL,
                                    row_id         TEXT    NOT NULL,
-                                   field_name     TEXT    NOT NULL,
-                                   local_value    TEXT    NOT NULL,
-                                   remote_value   TEXT    NOT NULL,
+                                   field_name     TEXT,            -- NULL = whole-record conflict
+                                   local_value    TEXT    NOT NULL,  -- JSON: client_data from conflict response
+                                   remote_value   TEXT    NOT NULL,  -- JSON: server_data from conflict response
                                    detected_at    INTEGER NOT NULL
 );
 

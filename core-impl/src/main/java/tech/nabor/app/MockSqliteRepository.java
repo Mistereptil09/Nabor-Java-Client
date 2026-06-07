@@ -229,6 +229,11 @@ public class MockSqliteRepository implements SqliteRepository {
             }
 
             @Override
+            public java.util.List<tech.nabor.api.model.incidents.Incident> findDirty() {
+                return java.util.List.of();
+            }
+
+            @Override
             public void save(tech.nabor.api.model.incidents.Incident incident) {
             }
 

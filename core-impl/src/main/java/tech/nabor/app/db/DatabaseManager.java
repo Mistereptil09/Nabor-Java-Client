@@ -31,19 +31,29 @@ public class DatabaseManager {
     private void initSchema() {
         jdbi.useHandle(handle -> {
             handle.execute("PRAGMA foreign_keys = ON");
-
-            String sql = loadSql("schema.sql");
-            String cleaned = Arrays.stream(sql.split("\n"))
-                    .filter(line -> !line.trim().startsWith("--"))
-                    .collect(Collectors.joining("\n"));
-
-            for (String statement : cleaned.split(";")) {
-                String trimmed = statement.trim();
-                if (!trimmed.isEmpty()) {
-                    handle.execute(trimmed);
-                }
+            executeSqlFile(handle, "schema.sql");
+            // Run migrations — errors on duplicate columns are safe to ignore
+            try {
+                executeSqlFile(handle, "migration.sql");
+            } catch (Exception e) {
+                // Column already exists or other migration already applied — safe to skip
+                System.out.println("[DB] Migration skipped (already applied): " + e.getMessage());
             }
         });
+    }
+
+    private void executeSqlFile(org.jdbi.v3.core.Handle handle, String filename) {
+        String sql = loadSql(filename);
+        String cleaned = Arrays.stream(sql.split("\n"))
+                .filter(line -> !line.trim().startsWith("--"))
+                .collect(Collectors.joining("\n"));
+
+        for (String statement : cleaned.split(";")) {
+            String trimmed = statement.trim();
+            if (!trimmed.isEmpty()) {
+                handle.execute(trimmed);
+            }
+        }
     }
 
     private String loadSql(String filename) {

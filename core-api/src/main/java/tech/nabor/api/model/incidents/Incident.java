@@ -18,5 +18,9 @@ public record Incident(
         Instant assignedAt,
         Instant createdAt,
         Instant updatedAt,
-        Instant resolvedAt
+        Instant resolvedAt,
+        // sync tracking (client-side only, not sent to server)
+        String baseUpdatedAt,   // server updatedAt from last snapshot → sent as base_updated_at
+        Instant syncedAt,       // when this entity was last successfully pushed
+        boolean isDirty         // true = modified offline, needs push next cycle
 ) {}

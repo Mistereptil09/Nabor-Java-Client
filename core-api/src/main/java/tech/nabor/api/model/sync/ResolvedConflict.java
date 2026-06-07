@@ -6,7 +6,7 @@ public record ResolvedConflict(
         int id,
         String tableName,
         String rowId,
-        String fieldName,
-        String chosenValue,      // "local" or "remote"
+        String fieldName,        // null = whole-record conflict
+        String chosenValue,      // "local" | "remote" | "auto"
         Instant resolvedAt
 ) {}
