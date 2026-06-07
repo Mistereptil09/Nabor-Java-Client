@@ -1,7 +1,10 @@
 package tech.nabor.ui;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -17,6 +20,7 @@ import tech.nabor.api.NaborPlugin;
 import tech.nabor.api.error.NaborException;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.theme.ThemeManager;
+import tech.nabor.api.model.user.User;
 
 
 public class MainController {
@@ -35,22 +39,55 @@ public class MainController {
     private Button langButton;
     private Button incidentsNavButton;
     private Button statsNavButton;
-    private Button syncNavButton;
     private Button settingsNavButton;
+
+    private Runnable onDisconnect;
 
     public void setThemeManager(ThemeManager themeManager) {
         this.themeManager = themeManager;
     }
 
+    public void setOnDisconnect(Runnable onDisconnect) {
+        this.onDisconnect = onDisconnect;
+    }
+
+    // Track plugin nav buttons separately so they can be removed/rebuilt
+    private final List<Button> pluginNavButtons = new ArrayList<>();
+
     public void init(AppContext app, I18nManager i18n) {
         this.app = app;
         this.i18n = i18n;
 
+        // Rebuild plugin nav when a plugin is loaded or unloaded
+        app.pluginContext().getEventBus().subscribe(
+                tech.nabor.app.PluginRegistry.PLUGINS_CHANGED,
+                payload -> Platform.runLater(this::rebuildPluginNav));
+
+        // Show network errors to the user
+        app.pluginContext().getEventBus().subscribe(
+                tech.nabor.app.AppNaborHttpClient.NETWORK_ERROR,
+                payload -> Platform.runLater(() ->
+                        app.pluginContext().getReporter().reportWarning(
+                                "Network: " + (payload != null ? payload.toString() : "unknown error"))));
+
         ConnectedUser user = app.pluginContext().getConnectedUser();
-        userLabel.setText(user.getEmail() + "  ·  " + user.getRole());
+        String displayUserText = user.getEmail() + "  ·  " + user.getRole();
+
+        if (user.getUserId() != null) {
+            Optional<User> localUser = app.pluginContext().getDb().users().findById(user.getUserId());
+            if (localUser.isPresent()) {
+                User u = localUser.get();
+                String name = (u.firstName() + " " + u.lastName()).trim();
+                if (!name.isEmpty()) {
+                    displayUserText = name + " (" + u.email() + ")  ·  " + u.role();
+                }
+            }
+        }
+        userLabel.setText(displayUserText);
 
         installLanguageToggle();
         installThemeToggle();
+        installDisconnectButton();
         setupNavigation();
 
         i18n.onLocaleChange(this::applyTexts);
@@ -71,11 +108,21 @@ public class MainController {
         topBar.getChildren().add(themeButton);
     }
 
+    private void installDisconnectButton() {
+        Button disconnectBtn = new Button("🚪");
+        disconnectBtn.getStyleClass().add("theme-button");
+        disconnectBtn.setOnAction(e -> {
+            if (onDisconnect != null) onDisconnect.run();
+        });
+        topBar.getChildren().add(disconnectBtn);
+    }
+
     private void setupNavigation() {
+        // Built-in screens (incidents, stats, settings)
         Node incidentsView = loadScreen("/fxml/incidents-view.fxml");
         if (incidentsView != null) {
             incidentsNavButton = addNavItem("Incidents", incidentsView);
-            showView(incidentsView); 
+            showView(incidentsView);
         }
 
         Node statsView = loadScreen("/fxml/statistics-view.fxml");
@@ -83,19 +130,33 @@ public class MainController {
             statsNavButton = addNavItem("Statistiques", statsView);
         }
 
-        Node syncView = loadScreen("/fxml/sync-view.fxml");
-        if (syncView != null) {
-            syncNavButton = addNavItem("Synchronisation", syncView);
-        }
-
         Node settingsView = loadScreen("/fxml/settings-view.fxml");
         if (settingsView != null) {
             settingsNavButton = addNavItem("Réglages", settingsView);
         }
 
+        // Plugin-provided screens
+        rebuildPluginNav();
+    }
+
+    private void rebuildPluginNav() {
+        navBox.getChildren().removeAll(pluginNavButtons);
+        pluginNavButtons.clear();
+
+        String userId = app.pluginContext().getConnectedUser().getUserId();
         for (NaborPlugin plugin : app.registry().getPlugins()) {
+            // Only show plugins that are enabled for this user
+            boolean enabled = app.pluginContext().getDb().pluginStates()
+                    .findByUserAndPlugin(userId, plugin.getId())
+                    .map(s -> s.enabled())
+                    .orElse(true); // default: enabled
+            if (!enabled) continue;
+
             Optional<Node> view = plugin.getView();
-            view.ifPresent(node -> addNavItem(plugin.getDisplayName(), node));
+            if (view.isPresent()) {
+                Button btn = addNavItem(plugin.getDisplayName(), view.get());
+                pluginNavButtons.add(btn);
+            }
         }
     }
 
@@ -108,8 +169,6 @@ public class MainController {
                 incidents.init(app, i18n);
             } else if (controller instanceof StatisticsController statistics) {
                 statistics.init(app, i18n);
-            } else if (controller instanceof SyncController sync) {
-                sync.init(app, i18n);
             } else if (controller instanceof SettingsController settings) {
                 settings.init(app, i18n, themeManager);
             }
@@ -144,9 +203,6 @@ public class MainController {
         }
         if (statsNavButton != null) {
             statsNavButton.setText(i18n.t("nav.stats"));
-        }
-        if (syncNavButton != null) {
-            syncNavButton.setText(i18n.t("nav.sync"));
         }
         if (settingsNavButton != null) {
             settingsNavButton.setText(i18n.t("nav.settings"));

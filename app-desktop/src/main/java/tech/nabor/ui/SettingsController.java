@@ -246,26 +246,19 @@ public class SettingsController {
 
     private class ActionCell extends TableCell<PluginView, Void> {
         private final Button toggleButton = new Button();
-        private final Button removeButton = new Button();
-        private final HBox box = new HBox(8, toggleButton, removeButton);
+        private final HBox box = new HBox(toggleButton);
 
         ActionCell() {
             box.setAlignment(Pos.CENTER_LEFT);
             toggleButton.getStyleClass().add("nav-button");
-            removeButton.getStyleClass().add("danger-button");
 
             toggleButton.setOnAction(e -> {
                 PluginView pv = getCurrent();
                 plugins.setEnabled(pv.id(), !pv.enabled());
+                app.pluginContext().getEventBus().publish(
+                        tech.nabor.app.PluginRegistry.PLUGINS_CHANGED, pv.id());
                 reporter.reportInfo(i18n.t(pv.enabled()
                         ? "settings.plugin.disabled.toast" : "settings.plugin.enabled.toast"));
-                refresh();
-            });
-
-            removeButton.setOnAction(e -> {
-                PluginView pv = getCurrent();
-                plugins.uninstall(pv.id());
-                reporter.reportWarning(i18n.t("settings.plugin.uninstalled.toast", pv.displayName()));
                 refresh();
             });
         }
@@ -283,7 +276,6 @@ public class SettingsController {
             }
             PluginView pv = getCurrent();
             toggleButton.setText(pv.enabled() ? i18n.t("settings.plugin.disable") : i18n.t("settings.plugin.enable"));
-            removeButton.setText(i18n.t("settings.plugin.uninstall"));
             setGraphic(box);
         }
     }
