@@ -1,0 +1,4 @@
+.dirty-cell {
+    -fx-text-fill: -nabor-accent;
+    -fx-font-weight: bold;
+}
