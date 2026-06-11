@@ -75,6 +75,8 @@ public class AppSqliteRepository implements SqliteRepository {
     // Sync
     private final SyncChangelogRepository syncChangelog;
     private final SyncStateRepository syncState;
+    private final MappingNeighbourhoodRepository mappingNeighbourhoods;
+    private final SyncWhitelistRepository syncWhitelist;
     private final PendingConflictRepository pendingConflicts;
     private final ResolvedConflictRepository resolvedConflicts;
 
@@ -130,6 +132,8 @@ public class AppSqliteRepository implements SqliteRepository {
         // Sync
         this.syncChangelog = new AppSyncChangelogRepository(jdbi);
         this.syncState = new AppSyncStateRepository(jdbi);
+        this.mappingNeighbourhoods = new AppMappingNeighbourhoodRepository(jdbi);
+        this.syncWhitelist = new AppSyncWhitelistRepository(jdbi);
         this.pendingConflicts = new AppPendingConflictRepository(jdbi);
         this.resolvedConflicts = new AppResolvedConflictRepository(jdbi);
     }
@@ -183,6 +187,8 @@ public class AppSqliteRepository implements SqliteRepository {
     // Sync
     @Override public SyncChangelogRepository syncChangelog() { return syncChangelog; }
     @Override public SyncStateRepository syncState() { return syncState; }
+    @Override public MappingNeighbourhoodRepository mappingNeighbourhoods() { return mappingNeighbourhoods; }
+    @Override public SyncWhitelistRepository syncWhitelist() { return syncWhitelist; }
     @Override public PendingConflictRepository pendingConflicts() { return pendingConflicts; }
     @Override public ResolvedConflictRepository resolvedConflicts() { return resolvedConflicts; }
 }

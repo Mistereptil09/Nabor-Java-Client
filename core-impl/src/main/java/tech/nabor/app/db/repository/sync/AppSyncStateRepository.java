@@ -1,4 +1,3 @@
-// core-impl/src/main/java/tech/nabor/app/db/repository/sync/AppSyncStateRepository.java
 package tech.nabor.app.db.repository.sync;
 
 import org.jdbi.v3.core.Jdbi;
@@ -6,11 +5,9 @@ import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 import tech.nabor.api.model.sync.SyncState;
 import tech.nabor.api.repository.sync.SyncStateRepository;
-import tech.nabor.app.db.InstantMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
 import java.util.Optional;
 
 public class AppSyncStateRepository implements SyncStateRepository {
@@ -21,26 +18,22 @@ public class AppSyncStateRepository implements SyncStateRepository {
         this.jdbi = jdbi;
     }
 
-    // ── Mapper ────────────────────────────────────────────────────────────────
-
-    private static class SyncStateMapper implements RowMapper<SyncState> {
+    private static class Mapper implements RowMapper<SyncState> {
         @Override
         public SyncState map(ResultSet rs, StatementContext ctx) throws SQLException {
             return new SyncState(
-                    InstantMapper.fromNullableLong(rs, "last_synced_at"),
-                    rs.getString("last_sync_token"),
+                    rs.getString("latest_sync_cursor"),
+                    rs.getString("resume_cursor"),
                     rs.getInt("is_rolling_back") == 1
             );
         }
     }
 
-    // ── Queries ───────────────────────────────────────────────────────────────
-
     @Override
     public Optional<SyncState> get() {
         return jdbi.withHandle(h ->
                 h.createQuery("SELECT * FROM sync_state WHERE id = 1")
-                        .map(new SyncStateMapper())
+                        .map(new Mapper())
                         .findOne()
         );
     }
@@ -49,36 +42,45 @@ public class AppSyncStateRepository implements SyncStateRepository {
     public void save(SyncState state) {
         jdbi.useHandle(h ->
                 h.createUpdate("""
-                INSERT INTO sync_state (id, last_synced_at, last_sync_token, is_rolling_back)
-                VALUES (1, :lastSyncedAt, :lastSyncToken, :isRollingBack)
+                INSERT INTO sync_state (id, latest_sync_cursor, resume_cursor, is_rolling_back)
+                VALUES (1, :latest, :resume, :rollingBack)
                 ON CONFLICT(id) DO UPDATE SET
-                    last_synced_at  = excluded.last_synced_at,
-                    last_sync_token = excluded.last_sync_token,
-                    is_rolling_back = excluded.is_rolling_back
+                    latest_sync_cursor = excluded.latest_sync_cursor,
+                    resume_cursor      = excluded.resume_cursor,
+                    is_rolling_back    = excluded.is_rolling_back
                 """)
-                        .bind("lastSyncedAt",  InstantMapper.toLong(state.lastSyncedAt()))
-                        .bind("lastSyncToken", state.lastSyncToken())
-                        .bind("isRollingBack", state.isRollingBack() ? 1 : 0)
+                        .bind("latest",      state.latestSyncCursor())
+                        .bind("resume",      state.resumeCursor())
+                        .bind("rollingBack", state.isRollingBack() ? 1 : 0)
                         .execute()
         );
     }
 
     @Override
-    public void updateLastSyncedAt(Instant syncedAt) {
+    public void updateLatestCursor(String cursor) {
         jdbi.useHandle(h ->
                 h.createUpdate("""
-                UPDATE sync_state SET last_synced_at = :syncedAt WHERE id = 1
+                INSERT INTO sync_state (id, latest_sync_cursor, resume_cursor, is_rolling_back)
+                VALUES (1, :c, NULL, 0)
+                ON CONFLICT(id) DO UPDATE SET
+                    latest_sync_cursor = excluded.latest_sync_cursor,
+                    resume_cursor      = NULL
                 """)
-                        .bind("syncedAt", InstantMapper.toLong(syncedAt))
+                        .bind("c", cursor)
                         .execute()
         );
     }
 
     @Override
-    public void updateSyncToken(String token) {
+    public void updateResumeCursor(String cursor) {
         jdbi.useHandle(h ->
-                h.createUpdate("UPDATE sync_state SET last_sync_token = :token WHERE id = 1")
-                        .bind("token", token)
+                h.createUpdate("""
+                INSERT INTO sync_state (id, latest_sync_cursor, resume_cursor, is_rolling_back)
+                VALUES (1, NULL, :c, 0)
+                ON CONFLICT(id) DO UPDATE SET
+                    resume_cursor = excluded.resume_cursor
+                """)
+                        .bind("c", cursor)
                         .execute()
         );
     }

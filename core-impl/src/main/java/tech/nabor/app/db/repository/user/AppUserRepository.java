@@ -57,6 +57,15 @@ public class AppUserRepository implements UserRepository {
     // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
+    public List<User> findAll() {
+        return jdbi.withHandle(h ->
+                h.createQuery("SELECT * FROM users WHERE deleted_at IS NULL ORDER BY last_name")
+                        .map(new UserMapper())
+                        .list()
+        );
+    }
+
+    @Override
     public Optional<User> findById(String id) {
         return jdbi.withHandle(h ->
                 h.createQuery("SELECT * FROM users WHERE id = :id")

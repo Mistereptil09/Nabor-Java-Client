@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EvenementRepository {
+    List<Evenement> findAll();
     Optional<Evenement> findById(String id);
     List<Evenement> findByCreatorId(String creatorId);
     List<Evenement> findByNeighbourhood(String neighbourhoodId, EventStatus status, int limit);

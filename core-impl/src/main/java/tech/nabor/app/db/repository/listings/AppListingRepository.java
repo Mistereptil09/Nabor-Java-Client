@@ -50,6 +50,15 @@ public class AppListingRepository implements ListingRepository {
     // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
+    public List<Listing> findAll() {
+        return jdbi.withHandle(h ->
+                h.createQuery("SELECT * FROM listings WHERE deleted_at IS NULL ORDER BY created_at DESC")
+                        .map(new ListingMapper())
+                        .list()
+        );
+    }
+
+    @Override
     public Optional<Listing> findById(String id) {
         return jdbi.withHandle(h ->
                 h.createQuery("SELECT * FROM listings WHERE id = :id")

@@ -47,11 +47,11 @@ public class AppSyncChangelogRepository implements SyncChangelogRepository {
                         changedFields,
                         previousValues,
                         newValues,
-                        InstantMapper.fromNullableLong(rs, "changed_at"),
-                        InstantMapper.fromNullableLong(rs, "synced_at")
+                        rs.getString("base_updated_at"),
+                        InstantMapper.fromNullableLong(rs, "changed_at")
                 );
             } catch (Exception e) {
-                throw new SQLException("Erreur mapping SyncChange", e);
+                throw new SQLException("Error mapping SyncChange", e);
             }
         }
     }
@@ -64,40 +64,9 @@ public class AppSyncChangelogRepository implements SyncChangelogRepository {
     // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
-    public void track(ChangeEvent event) {
-        jdbi.useHandle(h -> {
-            try {
-                List<String> changedFields = event.newValues() != null && event.previousValues() != null
-                        ? event.newValues().keySet().stream()
-                        .filter(k -> !event.newValues().get(k).equals(
-                                event.previousValues().getOrDefault(k, null)))
-                        .toList()
-                        : null;
-
-                h.createUpdate("""
-                    INSERT INTO sync_changelog
-                        (table_name, row_id, operation, changed_fields, previous_values, new_values, changed_at)
-                    VALUES
-                        (:tableName, :rowId, :operation, :changedFields, :previousValues, :newValues, :changedAt)
-                    """)
-                        .bind("tableName",      event.tableName())
-                        .bind("rowId",          event.rowId())
-                        .bind("operation",      event.operation())
-                        .bind("changedFields",  changedFields != null ? json.writeValueAsString(changedFields) : null)
-                        .bind("previousValues", event.previousValues() != null ? json.writeValueAsString(event.previousValues()) : null)
-                        .bind("newValues",      event.newValues() != null ? json.writeValueAsString(event.newValues()) : null)
-                        .bind("changedAt",      InstantMapper.toLong(event.occurredAt()))
-                        .execute();
-            } catch (Exception e) {
-                throw new RuntimeException("Erreur track ChangeEvent", e);
-            }
-        });
-    }
-
-    @Override
-    public List<SyncChange> findUnsynced() {
+    public List<SyncChange> findAll() {
         return jdbi.withHandle(h ->
-                h.createQuery("SELECT * FROM sync_changelog WHERE synced_at IS NULL ORDER BY changed_at ASC")
+                h.createQuery("SELECT * FROM sync_changelog ORDER BY changed_at ASC")
                         .map(new SyncChangeMapper())
                         .list()
         );
@@ -114,28 +83,104 @@ public class AppSyncChangelogRepository implements SyncChangelogRepository {
     }
 
     @Override
-    public void markSynced(int id) {
+    public java.util.Optional<SyncChange> findById(int id) {
+        return jdbi.withHandle(h ->
+                h.createQuery("SELECT * FROM sync_changelog WHERE id = :id")
+                        .bind("id", id)
+                        .map(new SyncChangeMapper())
+                        .findOne()
+        );
+    }
+
+    @Override
+    public void track(ChangeEvent event) {
+        jdbi.useTransaction(h -> {
+            try {
+                // Merge with existing entry for same table+row: keep original previous_values,
+                // merge new_values and changed_fields, update changed_at.
+                var existing = h.createQuery(
+                        "SELECT * FROM sync_changelog WHERE table_name = :t AND row_id = :r")
+                        .bind("t", event.tableName()).bind("r", event.rowId())
+                        .map(new SyncChangeMapper()).findOne();
+
+                Map<String, String> prev = event.previousValues();
+                Map<String, String> next = event.newValues();
+
+                if (existing.isPresent()) {
+                    SyncChange old = existing.get();
+                    if (old.previousValues() != null) {
+                        Map<String, String> merged = new java.util.HashMap<>(old.previousValues());
+                        if (event.previousValues() != null) merged.putAll(event.previousValues());
+                        prev = merged;
+                    }
+                    if (old.newValues() != null) {
+                        Map<String, String> merged = new java.util.HashMap<>(old.newValues());
+                        if (event.newValues() != null) merged.putAll(event.newValues());
+                        next = merged;
+                    }
+                    h.createUpdate("DELETE FROM sync_changelog WHERE id = :id")
+                            .bind("id", old.id()).execute();
+                }
+
+                final Map<String, String> finalPrev = prev;
+                final Map<String, String> finalNext = next;
+                final List<String> fields;
+                if (finalNext != null && finalPrev != null) {
+                    fields = finalNext.keySet().stream()
+                            .filter(k -> !finalNext.get(k).equals(finalPrev.getOrDefault(k, "")))
+                            .toList();
+                } else if (finalNext != null) {
+                    fields = List.copyOf(finalNext.keySet());
+                } else {
+                    fields = null;
+                }
+
+                h.createUpdate("""
+                    INSERT INTO sync_changelog
+                        (table_name, row_id, operation, changed_fields,
+                         previous_values, new_values, base_updated_at, changed_at)
+                    VALUES
+                        (:tableName, :rowId, :operation, :changedFields,
+                         :previousValues, :newValues, :baseUpdatedAt, :changedAt)
+                    """)
+                        .bind("tableName",      event.tableName())
+                        .bind("rowId",          event.rowId())
+                        .bind("operation",      event.operation())
+                        .bind("changedFields",  fields != null ? json.writeValueAsString(fields) : null)
+                        .bind("previousValues", finalPrev != null ? json.writeValueAsString(finalPrev) : null)
+                        .bind("newValues",      finalNext != null ? json.writeValueAsString(finalNext) : null)
+                        .bind("baseUpdatedAt",  event.baseUpdatedAt())
+                        .bind("changedAt",      InstantMapper.toLong(event.occurredAt()))
+                        .execute();
+            } catch (Exception e) {
+                throw new RuntimeException("Error tracking ChangeEvent", e);
+            }
+        });
+    }
+
+    @Override
+    public void deleteByTableAndRow(String tableName, String rowId) {
         jdbi.useHandle(h ->
-                h.createUpdate("UPDATE sync_changelog SET synced_at = :now WHERE id = :id")
-                        .bind("now", System.currentTimeMillis())
-                        .bind("id",  id)
+                h.createUpdate("DELETE FROM sync_changelog WHERE table_name = :t AND row_id = :r")
+                        .bind("t", tableName)
+                        .bind("r", rowId)
                         .execute()
         );
     }
 
     @Override
-    public void markAllSynced() {
+    public void deleteAll() {
         jdbi.useHandle(h ->
-                h.createUpdate("UPDATE sync_changelog SET synced_at = :now WHERE synced_at IS NULL")
-                        .bind("now", System.currentTimeMillis())
+                h.createUpdate("DELETE FROM sync_changelog")
                         .execute()
         );
     }
 
     @Override
-    public void deleteUnsynced() {
+    public void deleteById(int id) {
         jdbi.useHandle(h ->
-                h.createUpdate("DELETE FROM sync_changelog WHERE synced_at IS NULL")
+                h.createUpdate("DELETE FROM sync_changelog WHERE id = :id")
+                        .bind("id", id)
                         .execute()
         );
     }

@@ -32,12 +32,32 @@ public class DatabaseManager {
         jdbi.useHandle(handle -> {
             handle.execute("PRAGMA foreign_keys = ON");
             executeSqlFile(handle, "schema.sql");
-            // Run migrations — errors on duplicate columns are safe to ignore
-            try {
-                executeSqlFile(handle, "migration.sql");
-            } catch (Exception e) {
-                // Column already exists or other migration already applied — safe to skip
-                System.out.println("[DB] Migration skipped (already applied): " + e.getMessage());
+        });
+        // Run migrations — safe on fresh DBs (ALTER TABLE fails gracefully).
+        try {
+            runMigrations();
+        } catch (Exception e) {
+            System.err.println("[DB] Migration step failed (may be normal on fresh DB): " + e.getMessage());
+        }
+    }
+
+    private void runMigrations() {
+        jdbi.useHandle(handle -> {
+            String sql = loadSql("migration.sql");
+            String cleaned = Arrays.stream(sql.split("\n"))
+                    .filter(line -> !line.trim().startsWith("--"))
+                    .collect(Collectors.joining("\n"));
+
+            for (String statement : cleaned.split(";")) {
+                String trimmed = statement.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        handle.execute(trimmed);
+                    } catch (Exception e) {
+                        // Column already exists / table exists — harmless.
+                        System.err.println("[DB] Migration statement skipped: " + e.getMessage());
+                    }
+                }
             }
         });
     }

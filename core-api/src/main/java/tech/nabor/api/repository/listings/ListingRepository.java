@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ListingRepository {
+    List<Listing> findAll();
     Optional<Listing> findById(String id);
     List<Listing> findByCreatorId(String creatorId);
     List<Listing> findByNeighbourhood(String neighbourhoodId, ListingStatus status, int limit);

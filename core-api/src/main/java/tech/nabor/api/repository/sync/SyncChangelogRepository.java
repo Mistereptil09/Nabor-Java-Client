@@ -6,10 +6,11 @@ import tech.nabor.api.model.sync.SyncChange;
 import java.util.List;
 
 public interface SyncChangelogRepository {
-    List<SyncChange> findUnsynced();                    // synced_at IS NULL
+    List<SyncChange> findAll();                         // all entries (no synced_at column anymore)
     List<SyncChange> findByTable(String tableName);
-    void track(ChangeEvent event);                      // inserts an entry
-    void markSynced(int id);                            // changes synced_at = now
-    void markAllSynced();                               // successful push — mark all
-    void deleteUnsynced();                              // rollback — delete non-pushed changes
+    java.util.Optional<SyncChange> findById(int id);
+    void track(ChangeEvent event);                      // insert entry (outbox)
+    void deleteByTableAndRow(String tableName, String rowId); // push success — remove from outbox
+    void deleteAll();                                   // discard all pending (rollback before pull)
+    void deleteById(int id);                            // rollback single entry
 }
