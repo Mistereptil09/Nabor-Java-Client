@@ -52,6 +52,20 @@ CREATE TABLE IF NOT EXISTS user_notification_preferences (
 );
 
 -- ============================================================
+-- MAPPING QUARTIER
+-- ============================================================
+CREATE TABLE IF NOT EXISTS mapping_neighbourhood_id (
+    neighbourhood_id   TEXT NOT NULL PRIMARY KEY,
+    neighbourhood_name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sync_whitelist (
+    entity_type TEXT NOT NULL,
+    field_name  TEXT NOT NULL,
+    PRIMARY KEY (entity_type, field_name)
+);
+
+-- ============================================================
 -- RÉSEAU SOCIAL
 -- ============================================================
 
@@ -341,10 +355,7 @@ CREATE TABLE IF NOT EXISTS incidents (
                            assigned_at       INTEGER,
                            created_at        INTEGER NOT NULL,
                            updated_at        INTEGER,
-                           resolved_at       INTEGER,
-                           base_updated_at   TEXT,     -- server updatedAt from last snapshot
-                           synced_at         INTEGER,  -- last successful push timestamp
-                           is_dirty          INTEGER NOT NULL DEFAULT 0  -- 1 = modified offline
+                           resolved_at       INTEGER
 );
 
 -- ============================================================
@@ -385,10 +396,10 @@ CREATE TABLE IF NOT EXISTS plugin_config (
 );
 
 CREATE TABLE IF NOT EXISTS sync_state (
-                            id              INTEGER PRIMARY KEY CHECK (id = 1),
-                            last_synced_at  INTEGER,
-                            last_sync_token TEXT,
-                            is_rolling_back INTEGER NOT NULL DEFAULT 0  -- 1 = rollback en cours
+                            id                 INTEGER PRIMARY KEY CHECK (id = 1),
+                            latest_sync_cursor TEXT,
+                            resume_cursor      TEXT,
+                            is_rolling_back    INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sync_changelog (
@@ -396,11 +407,11 @@ CREATE TABLE IF NOT EXISTS sync_changelog (
                                 table_name      TEXT    NOT NULL,
                                 row_id          TEXT    NOT NULL,
                                 operation       TEXT    NOT NULL CHECK (operation IN ('INSERT','UPDATE','DELETE')),
-                                changed_fields  TEXT,   -- JSON : ["severity", "status"]
-                                previous_values TEXT,   -- JSON : {"severity": "low", "status": "open"} — valeurs AVANT
-                                new_values      TEXT,   -- JSON : {"severity": "high", "status": "in_progress"} — valeurs APRÈS
-                                changed_at      INTEGER NOT NULL,
-                                synced_at       INTEGER
+                                changed_fields  TEXT,
+                                previous_values TEXT,
+                                new_values      TEXT,
+                                base_updated_at TEXT,
+                                changed_at      INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS pending_conflicts (
