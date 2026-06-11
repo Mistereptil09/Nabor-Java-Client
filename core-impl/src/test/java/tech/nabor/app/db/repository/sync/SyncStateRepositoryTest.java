@@ -5,8 +5,6 @@ import org.junit.jupiter.api.Test;
 import tech.nabor.api.model.sync.SyncState;
 import tech.nabor.app.db.BaseRepositoryTest;
 
-import java.time.Instant;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class SyncStateRepositoryTest extends BaseRepositoryTest {
@@ -18,98 +16,74 @@ class SyncStateRepositoryTest extends BaseRepositoryTest {
         repo = new AppSyncStateRepository(jdbi);
     }
 
-    // ── get ───────────────────────────────────────────────────────────────────
-
     @Test
     void get_returns_empty_when_no_state() {
         assertTrue(repo.get().isEmpty());
     }
 
     @Test
-    void get_returns_state_when_exists() {
-        Instant now = Instant.now();
-        repo.save(new SyncState(now, "token-abc", false));
-
+    void save_and_get() {
+        repo.save(new SyncState("cursor-abc", "resume-xyz", false));
         SyncState state = repo.get().orElseThrow();
-        assertEquals(now.toEpochMilli(), state.lastSyncedAt().toEpochMilli());
-        assertEquals("token-abc", state.lastSyncToken());
+        assertEquals("cursor-abc", state.latestSyncCursor());
+        assertEquals("resume-xyz", state.resumeCursor());
         assertFalse(state.isRollingBack());
-    }
-
-    // ── save ──────────────────────────────────────────────────────────────────
-
-    @Test
-    void save_inserts_state() {
-        repo.save(new SyncState(null, null, false));
-        assertTrue(repo.get().isPresent());
     }
 
     @Test
     void save_updates_existing_state() {
-        repo.save(new SyncState(null, "token-1", false));
-        repo.save(new SyncState(null, "token-2", true));
-
+        repo.save(new SyncState(null, null, false));
+        repo.save(new SyncState("cursor-1", "resume-1", true));
         SyncState state = repo.get().orElseThrow();
-        assertEquals("token-2", state.lastSyncToken());
+        assertEquals("cursor-1", state.latestSyncCursor());
+        assertEquals("resume-1", state.resumeCursor());
         assertTrue(state.isRollingBack());
     }
 
     @Test
     void save_only_one_row_exists() {
-        repo.save(new SyncState(null, "token-1", false));
-        repo.save(new SyncState(null, "token-2", false));
-        repo.save(new SyncState(null, "token-3", false));
-
-        // vérifie qu'il n'y a toujours qu'une seule ligne
-        assertEquals("token-3", repo.get().orElseThrow().lastSyncToken());
-    }
-
-    @Test
-    void save_persists_null_last_synced_at() {
         repo.save(new SyncState(null, null, false));
-        assertNull(repo.get().orElseThrow().lastSyncedAt());
+        repo.save(new SyncState("c2", null, false));
+        repo.save(new SyncState("c3", null, false));
+        assertEquals("c3", repo.get().orElseThrow().latestSyncCursor());
     }
 
-    // ── updateLastSyncedAt ────────────────────────────────────────────────────
-
     @Test
-    void updateLastSyncedAt_updates_timestamp() {
+    void save_persists_null_cursors() {
         repo.save(new SyncState(null, null, false));
-        Instant now = Instant.now();
-
-        repo.updateLastSyncedAt(now);
-
-        assertEquals(now.toEpochMilli(), repo.get().orElseThrow().lastSyncedAt().toEpochMilli());
+        assertNull(repo.get().orElseThrow().latestSyncCursor());
+        assertNull(repo.get().orElseThrow().resumeCursor());
     }
 
     @Test
-    void updateLastSyncedAt_does_not_affect_other_fields() {
-        repo.save(new SyncState(null, "token-abc", false));
-        repo.updateLastSyncedAt(Instant.now());
-
-        assertEquals("token-abc", repo.get().orElseThrow().lastSyncToken());
-    }
-
-    // ── updateSyncToken ───────────────────────────────────────────────────────
-
-    @Test
-    void updateSyncToken_updates_token() {
-        repo.save(new SyncState(null, "old-token", false));
-        repo.updateSyncToken("new-token");
-
-        assertEquals("new-token", repo.get().orElseThrow().lastSyncToken());
+    void updateLatestCursor_sets_and_clears_resume() {
+        repo.save(new SyncState(null, "old-resume", false));
+        repo.updateLatestCursor("final-cursor");
+        SyncState state = repo.get().orElseThrow();
+        assertEquals("final-cursor", state.latestSyncCursor());
+        assertNull(state.resumeCursor());
     }
 
     @Test
-    void updateSyncToken_does_not_affect_other_fields() {
-        Instant now = Instant.now();
-        repo.save(new SyncState(now, "old-token", false));
-        repo.updateSyncToken("new-token");
-
-        assertEquals(now.toEpochMilli(), repo.get().orElseThrow().lastSyncedAt().toEpochMilli());
+    void updateLatestCursor_does_not_affect_rolling_back() {
+        repo.save(new SyncState(null, null, true));
+        repo.updateLatestCursor("final-cursor");
+        assertTrue(repo.get().orElseThrow().isRollingBack());
     }
 
-    // ── setRollingBack ────────────────────────────────────────────────────────
+    @Test
+    void updateResumeCursor_sets_cursor() {
+        repo.save(new SyncState(null, null, false));
+        repo.updateResumeCursor("page-2-cursor");
+        assertEquals("page-2-cursor", repo.get().orElseThrow().resumeCursor());
+    }
+
+    @Test
+    void updateResumeCursor_does_not_affect_other_fields() {
+        repo.save(new SyncState("latest", null, false));
+        repo.updateResumeCursor("page-2-cursor");
+        assertEquals("latest", repo.get().orElseThrow().latestSyncCursor());
+    }
 
     @Test
     void setRollingBack_sets_true() {

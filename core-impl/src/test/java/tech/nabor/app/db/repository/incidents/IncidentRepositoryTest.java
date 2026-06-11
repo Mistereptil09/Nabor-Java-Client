@@ -35,8 +35,7 @@ class IncidentRepositoryTest extends BaseRepositoryTest {
                               IncidentStatus status, String neighbourhoodId) {
         return new Incident(id, reporterId, null, neighbourhoodId, null,
                 "Incident test", "Description", severity, status,
-                null, Instant.now(), null, null,
-                null, null, false);
+                null, Instant.now(), null, null);
     }
 
     // ── findById ──────────────────────────────────────────────────────────────
@@ -183,8 +182,7 @@ class IncidentRepositoryTest extends BaseRepositoryTest {
         Incident updated = new Incident("inc-1", "user-1", null, "n-1", null,
                 "Titre modifié", "Nouvelle description",
                 IncidentSeverity.critical, IncidentStatus.in_progress,
-                null, Instant.now(), Instant.now(), null,
-                null, null, false);
+                null, Instant.now(), Instant.now(), null);
         repo.save(updated);
 
         Incident found = repo.findById("inc-1").orElseThrow();

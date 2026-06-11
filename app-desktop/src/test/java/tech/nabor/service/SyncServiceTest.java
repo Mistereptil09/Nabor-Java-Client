@@ -14,10 +14,12 @@ import tech.nabor.api.model.incidents.Incident;
 import tech.nabor.api.model.sync.PendingConflict;
 import tech.nabor.api.model.sync.SyncState;
 import tech.nabor.api.repository.incidents.IncidentRepository;
+import tech.nabor.api.repository.sync.MappingNeighbourhoodRepository;
 import tech.nabor.api.repository.sync.PendingConflictRepository;
 import tech.nabor.api.repository.sync.ResolvedConflictRepository;
 import tech.nabor.api.repository.sync.SyncChangelogRepository;
 import tech.nabor.api.repository.sync.SyncStateRepository;
+import tech.nabor.api.repository.sync.SyncWhitelistRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -272,10 +274,10 @@ class SyncServiceTest {
     void markSynced_updatesSyncState() {
         assertFalse(db.syncState().get().isPresent());
 
-        service.markSynced();
+        service.markSynced("cursor-abc123");
 
         assertTrue(db.syncState().get().isPresent());
-        assertNotNull(db.syncState().get().get().lastSyncedAt());
+        assertNotNull(db.syncState().get().get().latestSyncCursor());
     }
 
     // ── lastSync ─────────────────────────────────────────────────────────────
@@ -321,8 +323,7 @@ class SyncServiceTest {
                 id, "reporter-1", null, null, null,
                 title, "Description", severity, status,
                 null, Instant.parse("2025-05-01T00:00:00Z"),
-                updatedAt, null,
-                null, null, false);
+                updatedAt, null);
     }
 
     // ── Stubs ────────────────────────────────────────────────────────────────
@@ -398,6 +399,8 @@ class SyncServiceTest {
         @Override public tech.nabor.api.repository.polls.PollRepository polls() { return null; }
         @Override public tech.nabor.api.repository.polls.PollOptionRepository pollOptions() { return null; }
         @Override public tech.nabor.api.repository.polls.VoteRepository votes() { return null; }
+        @Override public MappingNeighbourhoodRepository mappingNeighbourhoods() { return null; }
+        @Override public SyncWhitelistRepository syncWhitelist() { return null; }
     }
 
     static class StubPendingConflictRepository implements PendingConflictRepository {
@@ -452,6 +455,7 @@ class SyncServiceTest {
     static class StubIncidentRepository implements IncidentRepository {
         private final List<Incident> items = new ArrayList<>();
 
+        @Override public List<Incident> findAll() { return new ArrayList<>(items); }
         @Override public Optional<Incident> findById(String id) {
             return items.stream().filter(i -> i.id().equals(id)).findFirst();
         }
@@ -483,20 +487,17 @@ class SyncServiceTest {
                     .filter(i -> neighbourhoodId.equals(i.neighbourhoodId()))
                     .limit(limit).toList();
         }
-        @Override public List<Incident> findDirty() {
-            return items.stream().filter(Incident::isDirty).toList();
-        }
         @Override public void save(Incident incident) {
             items.removeIf(i -> i.id().equals(incident.id()));
             items.add(incident);
         }
+        @Override public void delete(String id) { items.removeIf(i -> i.id().equals(id)); }
         @Override public void assign(String id, String userId) {
             findById(id).ifPresent(i -> {
                 Incident updated = new Incident(i.id(), i.reporterId(), userId,
                         i.neighbourhoodId(), i.mongoDocumentId(),
                         i.title(), i.description(), i.severity(), IncidentStatus.in_progress,
-                        Instant.now(), i.createdAt(), Instant.now(), i.resolvedAt(),
-                        i.baseUpdatedAt(), i.syncedAt(), true);
+                        Instant.now(), i.createdAt(), Instant.now(), i.resolvedAt());
                 save(updated);
             });
         }
@@ -505,8 +506,7 @@ class SyncServiceTest {
                 Incident updated = new Incident(i.id(), i.reporterId(), i.assignedTo(),
                         i.neighbourhoodId(), i.mongoDocumentId(),
                         i.title(), i.description(), i.severity(), IncidentStatus.resolved,
-                        i.assignedAt(), i.createdAt(), Instant.now(), Instant.now(),
-                        i.baseUpdatedAt(), i.syncedAt(), true);
+                        i.assignedAt(), i.createdAt(), Instant.now(), Instant.now());
                 save(updated);
             });
         }
@@ -517,27 +517,25 @@ class SyncServiceTest {
 
         @Override public Optional<SyncState> get() { return Optional.ofNullable(state); }
         @Override public void save(SyncState s) { this.state = s; }
-        @Override public void updateLastSyncedAt(Instant at) {
-            if (state != null) state = new SyncState(at, state.lastSyncToken(), state.isRollingBack());
+        @Override public void updateLatestCursor(String cursor) {
+            state = new SyncState(cursor, null, state != null && state.isRollingBack());
         }
-        @Override public void updateSyncToken(String token) {
-            if (state != null) state = new SyncState(state.lastSyncedAt(), token, state.isRollingBack());
+        @Override public void updateResumeCursor(String cursor) {
+            state = new SyncState(state != null ? state.latestSyncCursor() : null, cursor,
+                    state != null && state.isRollingBack());
         }
         @Override public void setRollingBack(boolean rollingBack) {
-            if (state != null) state = new SyncState(state.lastSyncedAt(), state.lastSyncToken(), rollingBack);
+            if (state != null) state = new SyncState(state.latestSyncCursor(), state.resumeCursor(), rollingBack);
         }
     }
 
     static class StubSyncChangelogRepository implements SyncChangelogRepository {
-        @Override public List<tech.nabor.api.model.sync.SyncChange> findUnsynced() {
-            return List.of();
-        }
-        @Override public List<tech.nabor.api.model.sync.SyncChange> findByTable(String tableName) {
-            return List.of();
-        }
+        @Override public List<tech.nabor.api.model.sync.SyncChange> findAll() { return List.of(); }
+        @Override public List<tech.nabor.api.model.sync.SyncChange> findByTable(String tableName) { return List.of(); }
+        @Override public java.util.Optional<tech.nabor.api.model.sync.SyncChange> findById(int id) { return java.util.Optional.empty(); }
         @Override public void track(tech.nabor.api.event.ChangeEvent event) {}
-        @Override public void markSynced(int id) {}
-        @Override public void markAllSynced() {}
-        @Override public void deleteUnsynced() {}
+        @Override public void deleteByTableAndRow(String tableName, String rowId) {}
+        @Override public void deleteAll() {}
+        @Override public void deleteById(int id) {}
     }
 }

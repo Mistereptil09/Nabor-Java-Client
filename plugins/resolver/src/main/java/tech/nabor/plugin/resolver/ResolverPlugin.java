@@ -42,8 +42,9 @@ public class ResolverPlugin implements NaborPlugin {
         this.ctx = ctx;
         this.bundle = loadBundle();
 
-        // Refresh on sync completion (runs on background thread — refresh() is thread-safe)
         ctx.getEventBus().subscribe("sync.completed", payload -> refresh());
+        ctx.getEventBus().subscribe("sync.push.failed", payload -> refresh());
+        refresh();
     }
 
     private ResourceBundle loadBundle() {
@@ -100,6 +101,8 @@ public class ResolverPlugin implements NaborPlugin {
             private final HBox box = new HBox(6, localBtn, remoteBtn);
 
             {
+                localBtn.getStyleClass().add("accent-button");
+                remoteBtn.getStyleClass().add("nav-button");
                 localBtn.setOnAction(e -> {
                     PendingConflict c = currentConflict();
                     if (c != null) resolve(c, Choice.LOCAL);
@@ -171,19 +174,24 @@ public class ResolverPlugin implements NaborPlugin {
         if (conflict == null) return;
 
         try {
-            if ("incidents".equals(conflict.tableName())) {
-                resolveIncidentConflict(conflict, choice);
-            }
-            // Future: resolve listing/event/user conflicts here
+            JsonNode serverData = mapper.readTree(conflict.remoteValue());
+            String serverUpdatedAt = serverData.path("updatedAt").asText(null);
 
-            // Remove the conflict
+            if (choice == Choice.LOCAL) {
+                // Update outbox base_updated_at so re-push passes conflict check
+                updateOutboxBaseUpdatedAt(conflict.tableName(), conflict.rowId(), serverUpdatedAt);
+            } else {
+                // REMOTE: server data already applied on conflict detection; just clear outbox
+                ctx.getDb().syncChangelog().deleteByTableAndRow(
+                        conflict.tableName(), conflict.rowId());
+            }
+
             ctx.getDb().pendingConflicts().delete(conflict.id());
             ctx.getDb().resolvedConflicts().save(new ResolvedConflict(
                     0, conflict.tableName(), conflict.rowId(), conflict.fieldName(),
                     choice == Choice.LOCAL ? "local" : "remote", Instant.now()));
 
-            // Trigger re-push via event system, then refresh UI
-            ctx.getEventBus().publish("sync.start", null);
+            if (choice == Choice.LOCAL) ctx.getEventBus().publish("sync.push", null);
             Platform.runLater(() -> refresh());
 
         } catch (Exception e) {
@@ -191,43 +199,17 @@ public class ResolverPlugin implements NaborPlugin {
         }
     }
 
-    private void resolveIncidentConflict(PendingConflict conflict, Choice choice) throws Exception {
-        String rowId = conflict.rowId();
-        Optional<Incident> localOpt = ctx.getDb().incidents().findById(rowId);
-        if (localOpt.isEmpty()) return;
-
-        Incident local = localOpt.get();
-        JsonNode serverData = mapper.readTree(conflict.remoteValue());
-
-        if (choice == Choice.REMOTE) {
-            // Overwrite local with server data
-            String newTitle = serverData.path("title").asText(local.title());
-            String newDesc = serverData.path("description").asText(local.description());
-            IncidentSeverity newSev = parseSeverity(
-                    serverData.path("severity").asText(local.severity().name()));
-            IncidentStatus newStatus = parseStatus(
-                    serverData.path("status").asText(local.status().name()));
-            String newBaseUpdatedAt = serverData.path("updatedAt").asText(local.baseUpdatedAt());
-
-            Incident updated = new Incident(
-                    local.id(), local.reporterId(), local.assignedTo(),
-                    local.neighbourhoodId(), local.mongoDocumentId(),
-                    newTitle, newDesc, newSev, newStatus,
-                    local.assignedAt(), local.createdAt(), Instant.now(), local.resolvedAt(),
-                    newBaseUpdatedAt, Instant.now(), false);
-            ctx.getDb().incidents().save(updated);
-
-        } else {
-            // Keep local: update base_updated_at from server so re-push won't conflict
-            String newBaseUpdatedAt = serverData.path("updatedAt").asText(local.baseUpdatedAt());
-
-            Incident updated = new Incident(
-                    local.id(), local.reporterId(), local.assignedTo(),
-                    local.neighbourhoodId(), local.mongoDocumentId(),
-                    local.title(), local.description(), local.severity(), local.status(),
-                    local.assignedAt(), local.createdAt(), local.updatedAt(), local.resolvedAt(),
-                    newBaseUpdatedAt, local.syncedAt(), true);  // keep is_dirty = true
-            ctx.getDb().incidents().save(updated);
+    /** Update outbox base_updated_at so re-push passes server conflict check. */
+    private void updateOutboxBaseUpdatedAt(String tableName, String rowId, String newBase) {
+        var entries = ctx.getDb().syncChangelog().findByTable(tableName);
+        for (var c : entries) {
+            if (c.rowId().equals(rowId)) {
+                ctx.getDb().syncChangelog().track(new tech.nabor.api.event.ChangeEvent(
+                        c.tableName(), c.rowId(), c.operation(),
+                        c.previousValues(), c.newValues(), newBase, Instant.now()));
+                ctx.getDb().syncChangelog().deleteById(c.id());
+                break;
+            }
         }
     }
 

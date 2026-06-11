@@ -115,15 +115,13 @@ class ResolverPluginTest {
         assertTrue(db.pendingConflicts().hasConflicts());
 
         // Manually simulate what the resolver does on "Keep Local":
-        // 1. Update base_updated_at from server data
+        // Server is source of truth — keep local just means skip the overwrite.
+        // The entity stays as-is. Next pull will get fresh server data.
         Incident updated = new Incident(
                 local.id(), local.reporterId(), local.assignedTo(),
                 local.neighbourhoodId(), local.mongoDocumentId(),
                 local.title(), local.description(), local.severity(), local.status(),
-                local.assignedAt(), local.createdAt(), local.updatedAt(), local.resolvedAt(),
-                "2025-06-06T00:00:00Z",  // from server UpdatedAt
-                local.syncedAt(),
-                true);  // stays dirty
+                local.assignedAt(), local.createdAt(), local.updatedAt(), local.resolvedAt());
         db.incidents().save(updated);
 
         // 2. Remove conflict
@@ -133,12 +131,10 @@ class ResolverPluginTest {
         db.resolvedConflicts().save(new ResolvedConflict(
                 0, "incidents", "inc-1", "title", "local", Instant.now()));
 
-        // Verify: incident is still dirty (will re-push)
+        // Verify: incident kept local values
         Optional<Incident> after = db.incidents().findById("inc-1");
         assertTrue(after.isPresent());
-        assertTrue(after.get().isDirty(), "Should stay dirty for re-push");
-        assertEquals("2025-06-06T00:00:00Z", after.get().baseUpdatedAt(),
-                "base_updated_at should be updated from server");
+        assertEquals("Titre local", after.get().title(), "Should keep local title");
 
         // Verify: conflict removed
         assertFalse(db.pendingConflicts().hasConflicts());
@@ -154,31 +150,22 @@ class ResolverPluginTest {
         db.incidents().save(local);
 
         // Simulate "Keep Remote" resolution:
-        // 1. Parse server data and overwrite
         Incident updated = new Incident(
                 local.id(), local.reporterId(), local.assignedTo(),
                 local.neighbourhoodId(), local.mongoDocumentId(),
-                "Titre distant",           // from server
-                local.description(),
-                IncidentSeverity.high,     // from server
-                IncidentStatus.in_progress, // from server
-                local.assignedAt(), local.createdAt(), Instant.now(), local.resolvedAt(),
-                "2025-06-06T00:00:00Z",    // from server UpdatedAt
-                Instant.now(),             // syncedAt
-                false);                    // is_dirty = false
+                "Titre distant", local.description(),
+                IncidentSeverity.high, IncidentStatus.in_progress,
+                local.assignedAt(), local.createdAt(), Instant.now(), local.resolvedAt());
         db.incidents().save(updated);
 
-        // 2. Remove conflict
         db.pendingConflicts().deleteAll();
-
-        // 3. Record resolution
         db.resolvedConflicts().save(new ResolvedConflict(
                 0, "incidents", "inc-1", "title", "remote", Instant.now()));
 
-        // Verify: incident is clean
+        // Verify: incident has server data
         Optional<Incident> after = db.incidents().findById("inc-1");
         assertTrue(after.isPresent());
-        assertFalse(after.get().isDirty(), "Remote overwrite should clear is_dirty");
+        assertEquals("Titre distant", after.get().title(), "Should use remote title");
         assertEquals("Titre distant", after.get().title(), "Title should match server data");
     }
 
@@ -225,8 +212,7 @@ class ResolverPluginTest {
         return new Incident(
                 id, "reporter-1", null, null, null,
                 title, "Description", IncidentSeverity.medium, status,
-                null, Instant.parse("2025-05-01T00:00:00Z"), Instant.now(), null,
-                baseUpdatedAt, dirty ? null : Instant.now(), dirty);
+                null, Instant.parse("2025-05-01T00:00:00Z"), Instant.now(), null);
     }
 
     // ── Stubs ────────────────────────────────────────────────────────────────
@@ -285,6 +271,8 @@ class ResolverPluginTest {
         @Override public IncidentRepository incidents() { return incidents; }
         @Override public tech.nabor.api.repository.sync.SyncStateRepository syncState() { return null; }
         @Override public tech.nabor.api.repository.sync.SyncChangelogRepository syncChangelog() { return null; }
+        @Override public tech.nabor.api.repository.sync.MappingNeighbourhoodRepository mappingNeighbourhoods() { return null; }
+        @Override public tech.nabor.api.repository.sync.SyncWhitelistRepository syncWhitelist() { return null; }
         @Override public tech.nabor.api.repository.local.LocalAccountRepository localAccounts() { return null; }
         @Override public tech.nabor.api.repository.local.LocaleConfigRepository localeConfigs() { return null; }
         @Override public tech.nabor.api.repository.local.PluginStateRepository pluginStates() { return null; }
@@ -341,6 +329,7 @@ class ResolverPluginTest {
 
     static class StubIncidentRepository implements IncidentRepository {
         private final List<Incident> items = new ArrayList<>();
+        @Override public List<Incident> findAll() { return new ArrayList<>(items); }
         @Override public Optional<Incident> findById(String id) {
             return items.stream().filter(i -> i.id().equals(id)).findFirst();
         }
@@ -350,11 +339,11 @@ class ResolverPluginTest {
         @Override public List<Incident> findByStatus(IncidentStatus s, int l) { return List.of(); }
         @Override public List<Incident> findBySeverity(IncidentSeverity s, int l) { return List.of(); }
         @Override public List<Incident> findOpen(String n, int l) { return List.of(); }
-        @Override public List<Incident> findDirty() { return List.of(); }
         @Override public void save(Incident i) {
             items.removeIf(x -> x.id().equals(i.id()));
             items.add(i);
         }
+        @Override public void delete(String id) { items.removeIf(x -> x.id().equals(id)); }
         @Override public void assign(String id, String userId) {}
         @Override public void resolve(String id) {}
     }

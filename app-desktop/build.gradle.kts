@@ -52,6 +52,7 @@ dependencies {
     runtimeOnly(project(":plugins:test-plugin"))
     runtimeOnly(project(":plugins:sync")) // core plugin
     runtimeOnly(project(":plugins:resolver"))
+    runtimeOnly(project(":plugins:viewer"))
 
     // Génération des QR codes SSO (QRCodeUtil) — rendu local en WritableImage.
     implementation("com.google.zxing:core:3.5.3")
