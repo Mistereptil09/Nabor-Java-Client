@@ -62,6 +62,7 @@ public class LoginController {
         this.onAuthenticated = onAuthenticated;
         this.onDeleteAccount = onDeleteAccount;
         this.accounts = accounts != null ? accounts : List.of();
+        statusLabel.setWrapText(true);
         applyTexts();
 
         if (!this.accounts.isEmpty()) {
@@ -78,9 +79,15 @@ public class LoginController {
         subtitleLabel.setText(i18n.t("login.picker.subtitle"));
         hideQrElements();
 
-        pickerBox = new VBox(10);
-        pickerBox.setPadding(new Insets(16, 0, 16, 0));
+        if (pickerBox == null) {
+            pickerBox = new VBox(10);
+            pickerBox.setPadding(new Insets(16, 0, 16, 0));
+            VBox parent = (VBox) titleLabel.getParent();
+            int idx = parent.getChildren().indexOf(devLoginButton);
+            parent.getChildren().add(idx, pickerBox);
+        }
 
+        pickerBox.getChildren().clear();
         for (LocalAccount a : accounts) {
             Button loginBtn = new Button(a.displayName() + "  (" + a.email() + ")");
             loginBtn.setMaxWidth(Double.MAX_VALUE);
@@ -89,30 +96,23 @@ public class LoginController {
 
             Button delBtn = new Button("✕");
             delBtn.getStyleClass().add("danger-button");
+            delBtn.setMinWidth(40);
+            delBtn.setMinHeight(40);
             delBtn.setOnAction(e -> deleteAccount(a));
 
             HBox row = new HBox(6, loginBtn, delBtn);
             HBox.setHgrow(loginBtn, Priority.ALWAYS);
             pickerBox.getChildren().add(row);
         }
-
         Button newBtn = new Button(i18n.t("login.picker.new"));
         newBtn.setMaxWidth(Double.MAX_VALUE);
         newBtn.getStyleClass().add("accent-button");
         newBtn.setOnAction(e -> startChallenge());
         pickerBox.getChildren().add(newBtn);
-
-        // Insert the picker before the dev button in the parent VBox
-        VBox parent = (VBox) titleLabel.getParent();
-        int idx = parent.getChildren().indexOf(devLoginButton);
-        parent.getChildren().add(idx, pickerBox);
     }
 
     private void deleteAccount(LocalAccount account) {
-        if (onDeleteAccount != null) {
-            onDeleteAccount.accept(account);
-        }
-        // Remove from local list and rebuild the picker
+        if (onDeleteAccount != null) onDeleteAccount.accept(account);
         accounts = accounts.stream()
                 .filter(a -> !a.userId().equals(account.userId()))
                 .toList();
@@ -120,27 +120,7 @@ public class LoginController {
             hidePicker();
             startChallenge();
         } else {
-            // Rebuild picker
-            pickerBox.getChildren().clear();
-            for (LocalAccount a : accounts) {
-                Button loginBtn = new Button(a.displayName() + "  (" + a.email() + ")");
-                loginBtn.setMaxWidth(Double.MAX_VALUE);
-                loginBtn.getStyleClass().add("nav-button");
-                loginBtn.setOnAction(e -> tryLogin(a));
-
-                Button delBtn = new Button("✕");
-                delBtn.getStyleClass().add("danger-button");
-                delBtn.setOnAction(e -> deleteAccount(a));
-
-                HBox row = new HBox(6, loginBtn, delBtn);
-                HBox.setHgrow(loginBtn, Priority.ALWAYS);
-                pickerBox.getChildren().add(row);
-            }
-            Button newBtn = new Button(i18n.t("login.picker.new"));
-            newBtn.setMaxWidth(Double.MAX_VALUE);
-            newBtn.getStyleClass().add("accent-button");
-            newBtn.setOnAction(e -> startChallenge());
-            pickerBox.getChildren().add(newBtn);
+            showPicker();
         }
     }
 
@@ -157,7 +137,7 @@ public class LoginController {
             onAuthenticated.accept(session);
         })).exceptionally(ex -> {
             Platform.runLater(() ->
-                    statusLabel.setText(i18n.t("login.status.refresh_failed")));
+                    statusLabel.setText(loginErrorMessage(ex)));
             return null;
         });
     }
@@ -185,7 +165,7 @@ public class LoginController {
             expiryTimeline.play();
         } catch (Exception e) {
             e.printStackTrace();
-            statusLabel.setText("Error: " + e.getMessage());
+            statusLabel.setText(loginErrorMessage(e));
         }
     }
 
@@ -205,7 +185,7 @@ public class LoginController {
                 }))
                 .exceptionally(ex -> {
                     Platform.runLater(() ->
-                            statusLabel.setText("Polling error: " + ex.getMessage()));
+                            statusLabel.setText(loginErrorMessage(ex)));
                     return null;
                 });
     }
@@ -244,6 +224,49 @@ public class LoginController {
             openBrowserButton.setVisible(true);
             openBrowserButton.setManaged(true);
         }
+    }
+
+    // ── Error mapping ────────────────────────────────────────────────────────
+
+    /**
+     * Inspects the exception chain and returns a user-friendly message
+     * distinguishing API-down, timeout, DNS failure, auth error, etc.
+     */
+    private String loginErrorMessage(Throwable ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof java.net.ConnectException) {
+                return i18n.t("login.error.api_down");
+            }
+            if (cause instanceof java.net.SocketTimeoutException
+                    || cause instanceof java.net.http.HttpTimeoutException) {
+                return i18n.t("login.error.timeout");
+            }
+            if (cause instanceof java.net.UnknownHostException) {
+                return i18n.t("login.error.dns");
+            }
+            if (cause instanceof java.io.IOException) {
+                String msg = cause.getMessage();
+                if (msg != null) {
+                    if (msg.contains("401") || msg.contains("403")) {
+                        return i18n.t("login.error.auth");
+                    }
+                    if (msg.contains("500") || msg.contains("502") || msg.contains("503")) {
+                        return i18n.t("login.error.server", msg.replaceAll(".*?(\\d{3}).*", "$1"));
+                    }
+                }
+                return i18n.t("login.error.network", msg != null ? msg : cause.getClass().getSimpleName());
+            }
+            if (cause instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+                return i18n.t("login.error.timeout");
+            }
+            cause = cause.getCause();
+        }
+        // Fallback: unwrap the wrapper exception
+        Throwable root = ex.getCause() != null ? ex.getCause() : ex;
+        return i18n.t("login.error.network", root.getMessage() != null
+                ? root.getMessage() : root.getClass().getSimpleName());
     }
 
     // ── Button actions ───────────────────────────────────────────────────────

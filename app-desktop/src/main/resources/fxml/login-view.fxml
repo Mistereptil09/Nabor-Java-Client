@@ -24,7 +24,7 @@
 
         <Label fx:id="statusLabel" styleClass="login-status"/>
 
-        <Button fx:id="refreshButton" onAction="#onRefresh"/>
+        <Button fx:id="refreshButton" onAction="#onRefresh" styleClass="dev-button"/>
         <Button fx:id="devLoginButton" onAction="#onDevLogin" styleClass="dev-button"/>
         <Button fx:id="openBrowserButton" onAction="#onOpenBrowser" styleClass="dev-button"/>
     </VBox>

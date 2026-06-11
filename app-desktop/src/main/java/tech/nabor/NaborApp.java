@@ -105,27 +105,35 @@ public class NaborApp extends Application {
         if (app.pluginContext().getHttpClient() instanceof AppNaborHttpClient httpClient) {
             httpClient.setToken(session.accessToken());
             this.refreshToken = session.refreshToken();
-            // Wire auto-refresh on 401
+        }
+
+        String[] profile = fetchUserProfile(session.accessToken());
+        // profile = [userId, email, displayName, role]
+
+        if (app.pluginContext().getHttpClient() instanceof AppNaborHttpClient httpClient) {
             if (session.refreshToken() != null && !session.refreshToken().isBlank()) {
+                String userId = profile[0];
                 httpClient.setTokenRefresher(() -> {
                     System.out.println("[Auth] Token expired, refreshing...");
                     var newSession = authService.refresh(refreshToken);
-                    // Store the rotated refresh token from server
                     refreshToken = newSession.refreshToken();
+                    app.pluginContext().getDb().localAccounts().findById(userId)
+                            .ifPresent(acct -> app.pluginContext().getDb().localAccounts()
+                                    .save(new LocalAccount(acct.userId(), acct.email(),
+                                            acct.displayName(), acct.isActive(),
+                                            acct.lastLoginAt(), refreshToken)));
                     System.out.println("[Auth] Token refreshed successfully");
                     return newSession.accessToken();
                 });
             }
         }
 
-        User profileUser = fetchUserProfile(session.accessToken());
-
         ConnectedUser user = app.pluginContext().getConnectedUser();
         if (user instanceof MutableConnectedUser mutable) {
-            mutable.connect(profileUser.id(), profileUser.email(), profileUser.role().name());
+            mutable.connect(profile[0], profile[1], profile[3]);
         }
 
-        ensureLocalUser(profileUser);
+        ensureLocalUser(profile[0], profile[1], profile[2]);
 
         app.registry().loadAll(app.pluginContext());
 
@@ -143,97 +151,64 @@ public class NaborApp extends Application {
         }
     }
 
-    private User fetchUserProfile(String token) {
-        if ("dev-access-token".equals(token)) {
-            return new User(
-                    "dev-admin-001", "Dev", "Admin", "admin@nabor.tech",
-                    "", null, null, null,
-                    Visibility.public_, null, MessagePolicy.open, i18n.locale(),
-                    null, null, UserRole.admin,
-                    Instant.now(), null, Instant.now(), null, null);
-        }
+    /** Returns [userId, email, displayName, role] from /users/me or JWT fallback. */
+    private String[] fetchUserProfile(String token) {
+        if ("dev-access-token".equals(token))
+            return new String[]{"dev-admin-001", "admin@nabor.tech", "Dev Admin", "admin"};
 
         try {
-            String profileJson = app.pluginContext().getHttpClient().get("/users/me");
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode profile = mapper.readTree(profileJson);
-
-            String userId = profile.path("id").asText();
-            String firstName = profile.path("firstName").asText();
-            String lastName = profile.path("lastName").asText();
-            String email = profile.path("email").asText();
-
-            String roleStr = profile.path("role").asText("resident").toLowerCase();
-            UserRole userRole = switch (roleStr) {
-                case "admin" -> UserRole.admin;
-                case "moderator" -> UserRole.moderator;
-                case "neighbourhood_rep" -> UserRole.neighbourhood_rep;
-                default -> UserRole.resident;
-            };
-
-            return new User(
-                    userId, firstName, lastName, email,
-                    "", null, null, null,
-                    Visibility.public_, null, MessagePolicy.open, i18n.locale(),
-                    null, null, userRole,
-                    Instant.now(), null, Instant.now(), null, null);
+            String json = app.pluginContext().getHttpClient().get("/users/me");
+            JsonNode p = new ObjectMapper().readTree(json);
+            String name = (p.path("firstName").asText("") + " " + p.path("lastName").asText("")).trim();
+            return new String[]{
+                    p.path("id").asText(),
+                    p.path("email").asText(""),
+                    name.isEmpty() ? "User" : name,
+                    p.path("role").asText("resident")};
         } catch (Exception e) {
-            System.err.println("Failed to fetch user profile, using local/offline fallback: " + e.getMessage());
+            System.err.println("[Auth] " + diagnoseError(e) + " — using JWT fallback");
             try {
                 String[] parts = token.split("\\.");
                 if (parts.length >= 2) {
                     String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode payload = mapper.readTree(payloadJson);
-                    String userId = payload.path("sub").asText();
-
-                    Optional<User> local = app.pluginContext().getDb().users().findById(userId);
-                    if (local.isPresent()) {
-                        return local.get();
-                    }
-
-                    String roleStr = payload.path("role").asText("resident").toLowerCase();
-                    UserRole userRole = switch (roleStr) {
-                        case "admin" -> UserRole.admin;
-                        case "moderator" -> UserRole.moderator;
-                        case "neighbourhood_rep" -> UserRole.neighbourhood_rep;
-                        default -> UserRole.resident;
-                    };
-                    String locale = payload.path("locale").asText("fr");
-                    return new User(
-                            userId, "Offline", "User", userId + "@offline.nabor.tech",
-                            "", null, null, null,
-                            Visibility.public_, null, MessagePolicy.open, locale,
-                            null, null, userRole,
-                            Instant.now(), null, Instant.now(), null, null);
+                    JsonNode p = new ObjectMapper().readTree(payloadJson);
+                    return new String[]{
+                            p.path("sub").asText("offline"),
+                            "offline",
+                            "Offline User",
+                            p.path("role").asText("resident")};
                 }
-            } catch (Exception ex) {
-                // Ignore and use final fallback
-            }
-
-            return new User(
-                    "2", "Offline", "Fallback", "fallback@nabor.tech",
-                    "", null, null, null,
-                    Visibility.public_, null, MessagePolicy.open, i18n.locale(),
-                    null, null, UserRole.resident,
-                    Instant.now(), null, Instant.now(), null, null);
+            } catch (Exception ignored) {}
+            return new String[]{"offline", "offline", "Offline User", "resident"};
         }
     }
 
-    private void ensureLocalUser(User profileUser) {
+    private void ensureLocalUser(String userId, String email, String displayName) {
         SqliteRepository db = app.pluginContext().getDb();
-
-        String displayName = (profileUser.firstName() + " " + profileUser.lastName()).trim();
-        if (displayName.isEmpty()) {
-            displayName = "User " + profileUser.id();
-        }
-
         db.localAccounts().save(new LocalAccount(
-                profileUser.id(), profileUser.email(), displayName, true,
-                Instant.now(), refreshToken));
-        db.localAccounts().setActive(profileUser.id());
+                userId, email, displayName, true, Instant.now(), refreshToken));
+        db.localAccounts().setActive(userId);
     }
 
+
+    /** Maps an exception to a short diagnostic label. */
+    private static String diagnoseError(Throwable e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof java.net.ConnectException) return "API unreachable";
+            if (cause instanceof java.net.SocketTimeoutException
+                    || cause instanceof java.net.http.HttpTimeoutException) return "Request timed out";
+            if (cause instanceof java.net.UnknownHostException) return "DNS resolution failed";
+            if (cause instanceof java.io.IOException) {
+                String msg = cause.getMessage();
+                if (msg != null && (msg.contains("401") || msg.contains("403"))) return "Token rejected (HTTP 401/403)";
+                if (msg != null && msg.contains("500")) return "Server error (HTTP 500)";
+                return "IO error: " + (msg != null ? msg : cause.getClass().getSimpleName());
+            }
+            cause = cause.getCause();
+        }
+        return "Unexpected error: " + e.getMessage();
+    }
 
     @Override
     public void stop() {

@@ -34,11 +34,19 @@ public class SyncService {
 
 
     public Optional<Instant> lastSync() {
-        return db.syncState().get().map(SyncState::lastSyncedAt);
+        return db.syncState().get()
+                .map(SyncState::latestSyncCursor)
+                .filter(c -> c != null && !c.isBlank())
+                .map(c -> {
+                    try {
+                        String iso = new String(java.util.Base64.getDecoder().decode(c));
+                        return Instant.parse(iso);
+                    } catch (Exception e) { return null; }
+                });
     }
 
     public int unsyncedChangesCount() {
-        return db.syncChangelog().findUnsynced().size();
+        return db.syncChangelog().findAll().size();
     }
 
     public List<PendingConflict> pendingConflicts() {
@@ -103,15 +111,13 @@ public class SyncService {
                 field.equals("description") ? remoteValue : i.description(),
                 field.equals("severity") ? IncidentSeverity.valueOf(remoteValue) : i.severity(),
                 field.equals("status") ? IncidentStatus.valueOf(remoteValue) : i.status(),
-                i.assignedAt(), i.createdAt(), Instant.now(), i.resolvedAt(),
-                i.baseUpdatedAt(), i.syncedAt(), i.isDirty());
+                i.assignedAt(), i.createdAt(), Instant.now(), i.resolvedAt());
         db.incidents().save(updated);
     }
 
-    public void markSynced() {
-        db.syncChangelog().markAllSynced();
-        String token = db.syncState().get().map(SyncState::lastSyncToken).orElse(null);
-        db.syncState().save(new SyncState(Instant.now(), token, false));
+    public void markSynced(String latestCursor) {
+        db.syncChangelog().deleteAll();
+        db.syncState().updateLatestCursor(latestCursor);
         eventBus.publish(UiEvents.SYNC_CHANGED, null);
     }
 

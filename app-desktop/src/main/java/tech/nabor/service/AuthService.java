@@ -51,8 +51,6 @@ public class AuthService {
     public PollResult pollStatus(String tokenUuid) {
         try {
             String body = http.get("/auth/sso/qr/" + tokenUuid + "/status");
-            System.out.println("Polling response: " + body);
-
             JsonNode root = mapper.readTree(body);
             String statusStr = root.path("status").asText();
 
@@ -60,14 +58,25 @@ public class AuthService {
                 String accessToken = root.path("access_token").asText("");
                 String refreshToken = root.path("refresh_token").asText(null);
                 Session session = new Session(accessToken, refreshToken);
-                System.out.println("Login successful — access_token: "
-                        + (accessToken.length() > 20 ? accessToken.substring(0, 20) + "..." : accessToken));
+                System.out.println("[Auth] Login validated — access_token: "
+                        + (accessToken.length() > 20 ? accessToken.substring(0, 20) + "..." : accessToken)
+                        + (refreshToken != null ? " refresh: " + refreshToken.substring(0, Math.min(20, refreshToken.length())) + "..." : ""));
+                System.out.println("[Auth] Full response: " + body);
                 return new PollResult(Status.VALIDATED, session);
             } else if ("expired".equalsIgnoreCase(statusStr)) {
+                System.out.println("[Auth] QR code expired");
                 return new PollResult(Status.EXPIRED, null);
+            } else if (!"pending".equalsIgnoreCase(statusStr)) {
+                System.out.println("[Auth] Unexpected poll status: " + statusStr + " — " + body);
             }
+        } catch (java.net.ConnectException e) {
+            System.err.println("[Auth] API unreachable during poll: " + e.getMessage());
+        } catch (java.net.SocketTimeoutException | java.net.http.HttpTimeoutException e) {
+            System.err.println("[Auth] Poll timed out: " + e.getMessage());
+        } catch (java.io.IOException e) {
+            System.err.println("[Auth] Polling IO error: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("Polling error: " + e.getMessage());
+            System.err.println("[Auth] Polling error: " + e.getMessage());
         }
         return new PollResult(Status.PENDING, null);
     }
@@ -91,6 +100,12 @@ public class AuthService {
                 .build();
         try {
             var resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 401 || resp.statusCode() == 403) {
+                throw new IOException("HTTP 401 — token rejected");
+            }
+            if (resp.statusCode() >= 500) {
+                throw new IOException("HTTP " + resp.statusCode() + " — server error");
+            }
             if (resp.statusCode() >= 400) {
                 throw new IOException("Refresh failed: HTTP " + resp.statusCode());
             }

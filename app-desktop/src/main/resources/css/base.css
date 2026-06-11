@@ -17,7 +17,12 @@
 }
 
 /* ── Top bar ─────────────────────────────────────────────── */
-.top-bar { -fx-background-color: -nabor-primary; }
+.top-bar {
+    -fx-background-color: -nabor-primary;
+    -fx-padding: 8 16 8 16;
+    -fx-spacing: 16;
+    -fx-alignment: CENTER_LEFT;
+}
 .app-title    { -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold; }
 .user-label   { -fx-text-fill: white; -fx-font-size: 12px; }
 .online-label { -fx-text-fill: white; -fx-font-size: 12px; }
@@ -26,6 +31,32 @@
 .sidebar-scroll { -fx-background-color: -nabor-surface; -fx-border-width: 0; }
 .sidebar-scroll > .viewport { -fx-background-color: -nabor-surface; }
 .sidebar { -fx-background-color: -nabor-surface; }
+
+/* ── Scrollbars ──────────────────────────────────────────── */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+    -fx-pref-height: 8;
+}
+.scroll-bar .track {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+}
+.scroll-bar .thumb {
+    -fx-background-color: derive(-nabor-text-muted, 20%);
+    -fx-background-radius: 4;
+    -fx-background-insets: 2;
+}
+.scroll-bar .thumb:hover {
+    -fx-background-color: derive(-nabor-text-muted, -10%);
+}
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow { -fx-shape: " "; }
 
 .nav-button {
     -fx-background-color: transparent;
@@ -40,7 +71,7 @@
 
 .theme-button {
     -fx-background-color: transparent;
-    -fx-text-fill: white;
+    -fx-text-fill: -nabor-text;
     -fx-font-size: 16px;
     -fx-cursor: hand;
 }
@@ -94,12 +125,15 @@
 .login-status   { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }
 .dev-button {
     -fx-background-color: transparent;
-    -fx-text-fill: -nabor-text-muted;
-    -fx-border-color: -nabor-text-muted;
+    -fx-text-fill: -nabor-text;
+    -fx-border-color: -nabor-text;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
     -fx-cursor: hand;
 }
+.dev-button:hover  { -fx-background-color: derive(-nabor-primary, 75%); }
+.dev-button:pressed { -fx-background-color: derive(-nabor-primary, 60%); }
+
 
 /* ── Contrôles JavaFX standards : rendre lisibles dans tous les thèmes ──── */
 

@@ -25,6 +25,7 @@
             <Label fx:id="filterLabel"/>
             <ComboBox fx:id="statusFilter"/>
             <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="deleteButton" onAction="#onDelete" styleClass="danger-button"/>
             <Button fx:id="newButton" onAction="#onNew" styleClass="accent-button"/>
         </HBox>
     </top>
@@ -32,10 +33,13 @@
     <center>
         <TableView fx:id="table">
             <columns>
-                <TableColumn fx:id="titleCol" prefWidth="260"/>
-                <TableColumn fx:id="severityCol" prefWidth="110"/>
-                <TableColumn fx:id="statusCol" prefWidth="130"/>
-                <TableColumn fx:id="createdCol" prefWidth="170"/>
+                <TableColumn fx:id="titleCol" prefWidth="220"/>
+                <TableColumn fx:id="severityCol" prefWidth="90"/>
+                <TableColumn fx:id="statusCol" prefWidth="110"/>
+                <TableColumn fx:id="reporterCol" prefWidth="130"/>
+                <TableColumn fx:id="assignedCol" prefWidth="130"/>
+                <TableColumn fx:id="neighbourhoodCol" prefWidth="130"/>
+                <TableColumn fx:id="createdCol" prefWidth="140"/>
             </columns>
         </TableView>
     </center>
