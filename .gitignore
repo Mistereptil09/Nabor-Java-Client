@@ -4,6 +4,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 .kotlin
+cahier_des_charges_nabor.md
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
