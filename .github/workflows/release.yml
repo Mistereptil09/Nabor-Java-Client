@@ -1,0 +1,82 @@
+name: CD - Build & Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g., v1.0.0, v1.2.5)
+
+permissions:
+  contents: write # Required to create releases and upload assets
+
+jobs:
+  release:
+    name: Build & Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build and Bundle Application
+        run: ./gradlew :app-desktop:bundle --no-daemon
+
+      - name: Calculate Hash and Generate latest.json
+        id: metadata
+        run: |
+          # 1. Extract clean version string (remove 'v' prefix from tag)
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${TAG_NAME#v}"
+          echo "Version: $VERSION"
+          
+          # 2. Path to the compiled fat JAR
+          JAR_PATH="app-desktop/build/bundle/nabor-desktop.jar"
+          
+          # 3. Calculate SHA-256 checksum
+          SHA256_HASH=$(sha256sum "$JAR_PATH" | awk '{print $1}')
+          echo "SHA-256: $SHA256_HASH"
+          
+          # 4. Construct JSON file
+          cat <<EOF > latest.json
+          {
+            "version": "$VERSION",
+            "sha256": "$SHA256_HASH",
+            "changelog_url": "https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME",
+            "download_url": "https://github.com/${{ github.repository }}/releases/download/$TAG_NAME/nabor-desktop.jar"
+          }
+          EOF
+          
+          cat latest.json
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## Nabor Services Client Release ${{ github.ref_name }}
+            
+            This release contains the standalone executable fat JAR and core plugins.
+            
+            ### Assets Info:
+            - **nabor-desktop.jar**: Standalone desktop executable.
+            - **plugins/**: External plugins (download individually to your local `plugins/` directory).
+            - **latest.json**: Release metadata for the auto-updater.
+            
+            Find the changelog and release details below.
+          files: |
+            app-desktop/build/bundle/nabor-desktop.jar
+            app-desktop/build/bundle/plugins/*.jar
+            latest.json
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

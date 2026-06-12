@@ -1,7 +1,9 @@
 package tech.nabor.ui;
 
+import java.io.File;
 import java.util.Optional;
 
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
@@ -18,6 +20,7 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.HBox;
+import tech.nabor.app.PluginRegistry;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -222,7 +225,47 @@ public class SettingsController {
     private void onCheckUpdate() {
         UpdateService.UpdateInfo info = updates.checkForUpdate();
         if (info.available()) {
-            reporter.reportInfo(i18n.t("settings.updates.available", info.latestVersion()));
+            Alert alert = new Alert(AlertType.CONFIRMATION);
+            alert.setTitle(i18n.t("settings.updates.title"));
+            alert.setHeaderText(i18n.t("settings.updates.available", info.latestVersion()));
+            alert.setContentText(i18n.t("settings.updates.download.prompt"));
+            
+            if (pluginTable.getScene() != null && pluginTable.getScene().getWindow() != null) {
+                alert.initOwner(pluginTable.getScene().getWindow());
+            }
+
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                reporter.reportInfo(i18n.t("settings.updates.downloading"));
+                
+                Thread updateThread = new Thread(() -> {
+                    try {
+                        File downloadedJar = updates.downloadUpdate(info.downloadUrl());
+                        if (updates.verifyIntegrity(downloadedJar, info.sha256())) {
+                            Platform.runLater(() -> reporter.reportInfo(i18n.t("settings.updates.downloaded")));
+                            updates.applyUpdateAndRestart(downloadedJar);
+                        } else {
+                            Platform.runLater(() -> reporter.reportError(
+                                new tech.nabor.api.error.NaborException(
+                                    tech.nabor.api.error.NaborException.Kind.VALIDATION,
+                                    i18n.t("settings.updates.error.hash"),
+                                    null
+                                )
+                            ));
+                        }
+                    } catch (Exception e) {
+                        Platform.runLater(() -> reporter.reportError(
+                            new tech.nabor.api.error.NaborException(
+                                tech.nabor.api.error.NaborException.Kind.HTTP_ERROR,
+                                i18n.t("settings.updates.error.download", e.getMessage()),
+                                e
+                            )
+                        ));
+                    }
+                });
+                updateThread.setDaemon(true);
+                updateThread.start();
+            }
         } else {
             reporter.reportInfo(i18n.t("settings.updates.uptodate"));
         }
@@ -239,9 +282,37 @@ public class SettingsController {
         }
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            // TODO réel : supprimer ~/.nabor (settings + base SQLite) puis quitter.
-            reporter.reportWarning(i18n.t("settings.app.uninstall.done"));
+            uninstallAndExit();
         }
+    }
+
+    private void uninstallAndExit() {
+        try {
+            File appDir = new File(PluginRegistry.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getParentFile();
+            if (appDir.getName().equals("libs") || appDir.getName().equals("build"))
+                appDir = appDir.getParentFile();
+
+            boolean win = System.getProperty("os.name").toLowerCase().contains("win");
+            File script = File.createTempFile("nabor_uninstall_", win ? ".bat" : ".sh");
+            if (!win) script.setExecutable(true);
+
+            try (var w = new java.io.PrintWriter(script)) {
+                if (win) {
+                    w.println("@echo off");
+                    w.println("timeout /t 2 /nobreak >nul");
+                    w.println("rmdir /s /q \"" + appDir.getAbsolutePath() + "\"");
+                    w.println("del \"" + script.getAbsolutePath() + "\"");
+                } else {
+                    w.println("#!/bin/sh");
+                    w.println("sleep 2");
+                    w.println("rm -rf \"" + appDir.getAbsolutePath() + "\"");
+                }
+            }
+            new ProcessBuilder(script.getAbsolutePath()).inheritIO().start();
+        } catch (Exception ignored) {}
+        Platform.exit();
+        System.exit(0);
     }
 
     private class ActionCell extends TableCell<PluginView, Void> {

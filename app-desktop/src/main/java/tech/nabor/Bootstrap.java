@@ -29,7 +29,7 @@ public final class Bootstrap {
         SettingsStore settings = new SettingsStore();
         String locale = settings.get("locale", "fr");
 
-       
+
         I18n i18n = new AppI18n(locale);
 
         DatabaseManager dbManager = new DatabaseManager(DB_FILE, i18n);

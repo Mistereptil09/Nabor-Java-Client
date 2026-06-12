@@ -18,39 +18,102 @@ tasks.named<JavaExec>("run") {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
+// ── App bundle: fat JAR + plugins/ + nabor.db ─────────────────────────────
+fun isPlugin(file: java.io.File) = file.name.let { n ->
+    n.startsWith("sync-") || n.startsWith("viewer-") || n.startsWith("resolver-")
+    || n.startsWith("export-csv-") || n.startsWith("social-") || n.startsWith("calendar-")
+    || n.startsWith("test-plugin-")
+}
 
 tasks.register<Jar>("fatJar") {
     group = "build"
-    description = "Assemble un JAR exécutable autonome (JavaFX inclus)"
-
+    description = "Assembles a fat JAR containing all dependencies except plugins"
     archiveBaseName.set("nabor-desktop")
     archiveClassifier.set("all")
 
     manifest {
         attributes["Main-Class"] = "tech.nabor.Main"
-        attributes["Implementation-Title"] = "Nabor Services Desktop"
-        attributes["Implementation-Version"] = project.version.toString()
+    }
+
+    from(sourceSets.main.get().output)
+
+    // Lazy collection to avoid resolving the configuration during gradle configuration phase
+    from(provider {
+        configurations.runtimeClasspath.get()
+            .filter { file -> file.name.endsWith(".jar") && !isPlugin(file) }
+            .map { file -> if (file.isDirectory) file else zipTree(file) }
+    }) {
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/MANIFEST.MF")
     }
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 
-    from(sourceSets.main.get().output)
-    dependsOn(configurations.runtimeClasspath)
-    from({
+tasks.register("bundle") {
+    group = "build"
+    description = "Assembles the executable fat JAR, copies external plugins, and sets up the database file."
+
+    dependsOn("fatJar")
+
+    // Ensure all plugin JARs are compiled first
+    val pluginProjects = listOf(
+        ":plugins:sync",
+        ":plugins:resolver",
+        ":plugins:viewer",
+        ":plugins:export-csv",
+        ":plugins:social",
+        ":plugins:calendar"
+    )
+    pluginProjects.forEach { dependsOn("$it:jar") }
+
+    doLast {
+        val bundleDir = rootProject.layout.buildDirectory.dir("bundle").get().asFile
+        // Clean the bundle directory first to start fresh
+        bundleDir.deleteRecursively()
+        bundleDir.mkdirs()
+
+        val pluginsDir = File(bundleDir, "plugins")
+        pluginsDir.mkdirs()
+
+        // 1. Copy the fat JAR and rename it to a clean name
+        val fatJarFile = tasks.named<Jar>("fatJar").get().archiveFile.get().asFile
+        if (fatJarFile.exists()) {
+            fatJarFile.copyTo(File(bundleDir, "nabor-desktop.jar"), overwrite = true)
+            println("[Bundle] Copied executable fat JAR to bundle directory.")
+        } else {
+            throw GradleException("Fat JAR was not found at ${fatJarFile.absolutePath}")
+        }
+
+        // 2. Copy the plugin JARs and rename them to clean names (without version/classifier)
         configurations.runtimeClasspath.get()
-            .filter { it.name.endsWith("jar") }
-            .map { zipTree(it) }
-    })
+            .filter { it.name.endsWith(".jar") && isPlugin(it) }
+            .forEach { file ->
+                val cleanName = file.name
+                    .replace("-1.0-SNAPSHOT", "")
+                    .replace("-all", "")
+                file.copyTo(File(pluginsDir, cleanName), overwrite = true)
+                println("[Bundle] Copied plugin: $cleanName")
+            }
 
-    // Les signatures de jars tiers casseraient un jar fusionné.
-    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+        // 3. Copy the database file if it exists in the root project directory
+        val rootDbFile = File(rootProject.projectDir, "nabor.db")
+        if (rootDbFile.exists()) {
+            rootDbFile.copyTo(File(bundleDir, "nabor.db"), overwrite = true)
+            println("[Bundle] Copied existing nabor.db to bundle.")
+        } else {
+            println("[Bundle] No existing nabor.db found in root project directory. A new database will be created on application launch.")
+        }
+
+        println("[Bundle] Successfully created clean run directory at: ${bundleDir.absolutePath}")
+    }
 }
 
 dependencies {
     implementation(project(":core-api"))
     implementation(project(":core-impl"))
-    runtimeOnly(project(":plugins:test-plugin"))
-    runtimeOnly(project(":plugins:sync")) // core plugin
+    // Core plugins — on classpath during dev, loaded as JARs in production.
+    // External plugins: build JAR, drop in plugins/ folder, restart.
+    runtimeOnly(project(":plugins:sync"))
     runtimeOnly(project(":plugins:resolver"))
     runtimeOnly(project(":plugins:viewer"))
     runtimeOnly(project(":plugins:export-csv"))
