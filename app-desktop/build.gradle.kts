@@ -54,6 +54,7 @@ dependencies {
     runtimeOnly(project(":plugins:resolver"))
     runtimeOnly(project(":plugins:viewer"))
     runtimeOnly(project(":plugins:export-csv"))
+    runtimeOnly(project(":plugins:social"))
 
     // Génération des QR codes SSO (QRCodeUtil) — rendu local en WritableImage.
     implementation("com.google.zxing:core:3.5.3")
