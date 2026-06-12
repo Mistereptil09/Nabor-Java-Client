@@ -18,11 +18,27 @@ tasks.named<JavaExec>("run") {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
+// ── Versioning ─────────────────────────────────────────────────────────────
+val generateVersionProperties by tasks.registering {
+    val outputFile = layout.buildDirectory.file("resources/main/version.properties")
+    outputs.file(outputFile)
+    inputs.property("version", project.version.toString())
+    doLast {
+        val file = outputFile.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText("version=${project.version}\n")
+    }
+}
+
+tasks.processResources {
+    dependsOn(generateVersionProperties)
+}
+
 // ── App bundle: fat JAR + plugins/ + nabor.db ─────────────────────────────
 fun isPlugin(file: java.io.File) = file.name.let { n ->
-    n.startsWith("sync-") || n.startsWith("viewer-") || n.startsWith("resolver-")
-    || n.startsWith("export-csv-") || n.startsWith("social-") || n.startsWith("calendar-")
-    || n.startsWith("test-plugin-")
+    n.startsWith("sync") || n.startsWith("viewer") || n.startsWith("resolver")
+    || n.startsWith("export-csv") || n.startsWith("social") || n.startsWith("calendar")
+    || n.startsWith("test-plugin")
 }
 
 tasks.register<Jar>("fatJar") {
@@ -32,7 +48,10 @@ tasks.register<Jar>("fatJar") {
     archiveClassifier.set("all")
 
     manifest {
-        attributes["Main-Class"] = "tech.nabor.Main"
+        attributes(
+            "Main-Class" to "tech.nabor.Main",
+            "Implementation-Version" to project.version.toString()
+        )
     }
 
     from(sourceSets.main.get().output)
@@ -85,6 +104,7 @@ tasks.register("bundle") {
         }
 
         // 2. Copy the plugin JARs and rename them to clean names (without version/classifier)
+
         configurations.runtimeClasspath.get()
             .filter { it.name.endsWith(".jar") && isPlugin(it) }
             .forEach { file ->

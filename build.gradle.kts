@@ -5,7 +5,7 @@ plugins {
 
 allprojects {
     group = "tech.nabor"
-    version = "1.0-SNAPSHOT"
+    version = findProperty("version") ?: "1.0-SNAPSHOT"
 
     repositories {
         mavenCentral()

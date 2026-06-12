@@ -24,7 +24,30 @@ import tech.nabor.app.AppNaborHttpClient;
 
 public class UpdateService {
 
-    public static final String CURRENT_VERSION = "1.0.0";
+    public static final String CURRENT_VERSION = loadCurrentVersion();
+
+    private static String loadCurrentVersion() {
+        String sysVer = System.getProperty("nabor.app.version");
+        if (sysVer != null && !sysVer.isBlank()) {
+            return sysVer;
+        }
+        String implVer = UpdateService.class.getPackage().getImplementationVersion();
+        if (implVer != null && !implVer.isBlank()) {
+            return implVer;
+        }
+        try (var is = UpdateService.class.getResourceAsStream("/version.properties")) {
+            if (is != null) {
+                var props = new java.util.Properties();
+                props.load(is);
+                String pVer = props.getProperty("version");
+                if (pVer != null && !pVer.isBlank()) {
+                    return pVer;
+                }
+            }
+        } catch (Exception ignored) {}
+        return "0.9.3";
+    }
+
 
     public record UpdateInfo(boolean available, String latestVersion, String sha256, String changelogUrl, String downloadUrl) {}
 

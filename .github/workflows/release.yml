@@ -28,7 +28,17 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build and Bundle Application
-        run: ./gradlew :app-desktop:bundle --no-daemon
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${TAG_NAME#v}"
+          echo "Building version: $VERSION"
+          ./gradlew :app-desktop:bundle "-Pversion=$VERSION" --no-daemon
+
+      - name: Package Application as ZIP
+        run: |
+          cd build/bundle
+          rm -f nabor.db
+          zip -r ../../nabor-desktop.zip *
 
       - name: Calculate Hash and Generate latest.json
         id: metadata
@@ -38,11 +48,11 @@ jobs:
           VERSION="${TAG_NAME#v}"
           echo "Version: $VERSION"
           
-          # 2. Path to the compiled fat JAR
-          JAR_PATH="build/bundle/nabor-desktop.jar"
+          # 2. Path to the compiled ZIP
+          ZIP_PATH="nabor-desktop.zip"
           
           # 3. Calculate SHA-256 checksum
-          SHA256_HASH=$(sha256sum "$JAR_PATH" | awk '{print $1}')
+          SHA256_HASH=$(sha256sum "$ZIP_PATH" | awk '{print $1}')
           echo "SHA-256: $SHA256_HASH"
           
           # 4. Construct JSON file
@@ -51,7 +61,7 @@ jobs:
             "version": "$VERSION",
             "sha256": "$SHA256_HASH",
             "changelog_url": "https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME",
-            "download_url": "https://github.com/${{ github.repository }}/releases/download/$TAG_NAME/nabor-desktop.jar"
+            "download_url": "https://github.com/${{ github.repository }}/releases/download/$TAG_NAME/nabor-desktop.zip"
           }
           EOF
           
@@ -69,15 +79,17 @@ jobs:
           body: |
             ## Nabor Services Client Release ${{ github.ref_name }}
             
-            This release contains the standalone executable fat JAR and core plugins.
+            This release contains the complete application package (including plugins), individual executables, and update metadata.
             
             ### Assets Info:
-            - **nabor-desktop.jar**: Standalone desktop executable.
-            - **plugins.zip**: Archive containing all core plugins (extract to your local `plugins/` directory).
+            - **nabor-desktop.zip**: Complete package with executable and plugins (recommended for new installations and used by auto-updater).
+            - **nabor-desktop.jar**: Standalone desktop executable fat JAR.
+            - **plugins.zip**: Archive containing all core plugins.
             - **latest.json**: Release metadata for the auto-updater.
             
             Find the changelog and release details below.
           files: |
+            nabor-desktop.zip
             build/bundle/nabor-desktop.jar
             build/bundle/plugins/*.jar
             latest.json
