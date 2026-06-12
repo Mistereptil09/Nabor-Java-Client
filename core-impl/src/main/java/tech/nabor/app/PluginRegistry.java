@@ -44,7 +44,17 @@ public class PluginRegistry {
     }
 
     private void loadFromJars(PluginContext ctx) {
-        File dir = new File("plugins/");
+        File installDir;
+        try {
+            installDir = new File(PluginRegistry.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+        } catch (Exception e) {
+            installDir = new File(".");
+        }
+
+        File dir = new File(installDir, "plugins/");
+        if (!dir.exists() || !dir.isDirectory()) {
+            dir = new File("plugins/");
+        }
         if (!dir.exists() || !dir.isDirectory()) return;
 
         File[] jars = dir.listFiles((d, name) -> name.endsWith(".jar"));
