@@ -39,7 +39,7 @@ jobs:
           echo "Version: $VERSION"
           
           # 2. Path to the compiled fat JAR
-          JAR_PATH="app-desktop/build/bundle/nabor-desktop.jar"
+          JAR_PATH="build/bundle/nabor-desktop.jar"
           
           # 3. Calculate SHA-256 checksum
           SHA256_HASH=$(sha256sum "$JAR_PATH" | awk '{print $1}')
@@ -73,8 +73,8 @@ jobs:
             
             Find the changelog and release details below.
           files: |
-            app-desktop/build/bundle/nabor-desktop.jar
-            app-desktop/build/bundle/plugins/*.jar
+            build/bundle/nabor-desktop.jar
+            build/bundle/plugins/*.jar
             latest.json
           draft: false
           prerelease: false
