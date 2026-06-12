@@ -91,7 +91,6 @@ jobs:
           files: |
             nabor-desktop.zip
             build/bundle/nabor-desktop.jar
-            build/bundle/plugins/*.jar
             latest.json
             plugins.zip
           draft: false
