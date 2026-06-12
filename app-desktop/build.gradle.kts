@@ -104,13 +104,18 @@ tasks.register("bundle") {
         }
 
         // 2. Copy the plugin JARs and rename them to clean names (without version/classifier)
-
+        val pluginPrefixes = listOf(
+            "sync", "viewer", "resolver", "export-csv", "social", "calendar", "test-plugin"
+        )
         configurations.runtimeClasspath.get()
             .filter { it.name.endsWith(".jar") && isPlugin(it) }
             .forEach { file ->
-                val cleanName = file.name
-                    .replace("-1.0-SNAPSHOT", "")
-                    .replace("-all", "")
+                val matchedPrefix = pluginPrefixes.firstOrNull { file.name.startsWith(it) }
+                val cleanName = if (matchedPrefix != null) {
+                    "$matchedPrefix.jar"
+                } else {
+                    file.name
+                }
                 file.copyTo(File(pluginsDir, cleanName), overwrite = true)
                 println("[Bundle] Copied plugin: $cleanName")
             }
