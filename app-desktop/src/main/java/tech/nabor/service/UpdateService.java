@@ -2,6 +2,7 @@ package tech.nabor.service;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -12,6 +13,8 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,7 +71,7 @@ public class UpdateService {
     }
 
     /**
-     * Downloads the latest update JAR to a temporary file.
+     * Downloads the latest update ZIP to a temporary file.
      */
     public File downloadUpdate(String downloadUrl) throws IOException, InterruptedException {
         String finalUrl = downloadUrl;
@@ -86,7 +89,7 @@ public class UpdateService {
                 .GET()
                 .build();
 
-        File tempFile = File.createTempFile("nabor-update-", ".jar.tmp");
+        File tempFile = File.createTempFile("nabor-update-", ".zip.tmp");
         tempFile.deleteOnExit();
 
         HttpResponse<Path> response = client.send(request, HttpResponse.BodyHandlers.ofFile(tempFile.toPath()));
@@ -126,9 +129,9 @@ public class UpdateService {
     }
 
     /**
-     * Replaces the running JAR file with the new one and restarts the application.
+     * Extracts and replaces the running app files and restarts the application.
      */
-    public void applyUpdateAndRestart(File newJarFile) throws Exception {
+    public void applyUpdateAndRestart(File zipFile) throws Exception {
         File runningJar;
         try {
             runningJar = new File(UpdateService.class.getProtectionDomain().getCodeSource().getLocation().toURI());
@@ -136,32 +139,80 @@ public class UpdateService {
             throw new IOException("Cannot locate running JAR file path", e);
         }
 
+        File installDir = runningJar.getParentFile();
+        if (runningJar.getName().equals("libs") || runningJar.getName().equals("build")) {
+            installDir = installDir.getParentFile();
+        }
+
         if (!runningJar.getName().endsWith(".jar")) {
             System.out.println("[UpdateService] Running in IDE or non-JAR package. Skipping restart overwrite.");
             return;
         }
 
-        String runningJarPath = runningJar.getAbsolutePath();
-        String tempJarPath = newJarFile.getAbsolutePath();
+        File tempDir = new File(installDir, "nabor_update_temp");
+        if (tempDir.exists()) {
+            deleteDir(tempDir);
+        }
+        tempDir.mkdirs();
+
+        // 1. Extract ZIP to temp update folder
+        System.out.println("[UpdateService] Extracting update package...");
+        unzip(zipFile, tempDir);
+
+        String tempDirPath = tempDir.getAbsolutePath();
+        String installDirPath = installDir.getAbsolutePath();
+        String zipFilePath = zipFile.getAbsolutePath();
 
         List<String> command = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) {
-            // Windows: Use ping for a short delay to let the app close, then overwrite and restart
+            // Windows: xcopy the temp update folder over the install directory, rmdir tempDir, launch new JAR
             command.addAll(List.of(
                 "cmd.exe", "/c",
-                "ping 127.0.0.1 -n 3 > nul && move /y \"" + tempJarPath + "\" \"" + runningJarPath + "\" && start \"\" /b java -jar \"" + runningJarPath + "\""
+                "ping 127.0.0.1 -n 3 > nul && xcopy /y /e /q \"" + tempDirPath + "\\*\" \"" + installDirPath + "\" && rmdir /s /q \"" + tempDirPath + "\" && del /q \"" + zipFilePath + "\" && start \"\" /b java -jar \"" + installDirPath + "\\nabor-desktop.jar\""
             ));
         } else {
-            // macOS / Linux: Sleep to let the app close, then overwrite and restart
+            // macOS / Linux: sleep, cp -rf the temp update folder over install directory, rm -rf tempDir, launch new JAR
             command.addAll(List.of(
                 "sh", "-c",
-                "sleep 2 && mv -f \"" + tempJarPath + "\" \"" + runningJarPath + "\" && java -jar \"" + runningJarPath + "\" &"
+                "sleep 2 && cp -rf \"" + tempDirPath + "\"/* \"" + installDirPath + "\" && rm -rf \"" + tempDirPath + "\" \"" + zipFilePath + "\" && java -jar \"" + installDirPath + "/nabor-desktop.jar\" &"
             ));
         }
 
         System.out.println("[UpdateService] Launching updater process and shutting down...");
         new ProcessBuilder(command).start();
         System.exit(0);
+    }
+
+    private void unzip(File zipFile, File destDir) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+            ZipEntry entry;
+            byte[] buffer = new byte[4096];
+            while ((entry = zis.getNextEntry()) != null) {
+                File newFile = new File(destDir, entry.getName());
+                if (entry.isDirectory()) {
+                    newFile.mkdirs();
+                } else {
+                    newFile.getParentFile().mkdirs();
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                }
+                zis.closeEntry();
+            }
+        }
+    }
+
+    private void deleteDir(File file) {
+        File[] contents = file.listFiles();
+        if (contents != null) {
+            for (File f : contents) {
+                deleteDir(f);
+            }
+        }
+        file.delete();
     }
 
     private static boolean isNewerVersion(String current, String latest) {
