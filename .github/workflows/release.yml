@@ -57,6 +57,11 @@ jobs:
           
           cat latest.json
 
+      - name: Package Plugins as ZIP
+        run: |
+          cd build/bundle/plugins
+          zip -r ../../../plugins.zip *
+
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -68,7 +73,7 @@ jobs:
             
             ### Assets Info:
             - **nabor-desktop.jar**: Standalone desktop executable.
-            - **plugins/**: External plugins (download individually to your local `plugins/` directory).
+            - **plugins.zip**: Archive containing all core plugins (extract to your local `plugins/` directory).
             - **latest.json**: Release metadata for the auto-updater.
             
             Find the changelog and release details below.
@@ -76,6 +81,7 @@ jobs:
             build/bundle/nabor-desktop.jar
             build/bundle/plugins/*.jar
             latest.json
+            plugins.zip
           draft: false
           prerelease: false
         env:
