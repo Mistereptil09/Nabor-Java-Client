@@ -130,26 +130,41 @@ public class ViewerPlugin implements NaborPlugin {
     }
 
     private void buildAllTabs() {
+        this.bundle = loadBundle(); // reload for current locale
         loadNeighbourhoodNames();
         tabPane.getTabs().setAll(
                 buildEntityTab("incidents", "incident",
                         () -> ctx.getDb().incidents().findAll(),
                         this::incidentColumns,
-                        Incident::id, i -> i.id() + i.title()),
+                        Incident::id, i -> i.id() + i.title() + i.description()
+                                + i.severity().name() + i.status().name()
+                                + i.reporterId() + i.assignedTo()
+                                + resolveNb(i.neighbourhoodId())
+                                + fmt(i.createdAt()) + fmt(i.updatedAt()),
+                        incidentExtractors()),
                 buildEntityTab("users", "user",
                         () -> ctx.getDb().users().findAll(),
                         this::userColumns,
-                        User::id, u -> u.id() + u.firstName() + u.lastName()),
+                        User::id, u -> u.id() + u.firstName() + u.lastName()
+                                + u.email() + (u.bio() != null ? u.bio() : "")
+                                + u.role().name() + resolveNb(u.neighbourhoodId()),
+                        userExtractors()),
                 buildEntityTab("listings", "listing",
                         () -> ctx.getDb().listings().findAll(),
                         this::listingColumns,
                         tech.nabor.api.model.listings.Listing::id,
-                        l -> l.id() + l.title()),
+                        l -> l.id() + l.title() + l.description()
+                                + l.listingType().name() + l.priceCents()
+                                + l.status().name() + l.creatorId(),
+                        listingExtractors()),
                 buildEntityTab("events", "event",
                         () -> ctx.getDb().evenements().findAll(),
                         this::eventColumns,
                         tech.nabor.api.model.events.Evenement::id,
-                        e -> e.id() + e.title()),
+                        e -> e.id() + e.title() + e.status().name()
+                                + e.creatorId() + fmt(e.startsAt()) + fmt(e.endsAt())
+                                + (e.maxParticipants() != null ? e.maxParticipants() : ""),
+                        eventExtractors()),
                 buildNeighbourhoodTab(),
                 buildHistoryTab()
         );
@@ -178,7 +193,8 @@ public class ViewerPlugin implements NaborPlugin {
                                    java.util.function.Supplier<List<T>> loader,
                                    ColumnBuilder<T> columnsFn,
                                    Function<T, String> idFn,
-                                   Function<T, String> searchFn) {
+                                   Function<T, String> searchFn,
+                                   Map<String, Function<T, String>> columnExtractors) {
         List<T> data = loader.get();
         Set<String> wl = whitelistedFields(entityType);
         Map<String, Set<String>> dirtyMap = dirtyFields(tableName);
@@ -209,7 +225,7 @@ public class ViewerPlugin implements NaborPlugin {
             table.getColumns().add(editCol);
         }
 
-        return wrapTab(t("viewer.tab." + entityType), table, data, searchFn);
+        return wrapTab(t("viewer.tab." + tableName), table, data, searchFn, columnExtractors);
     }
 
     // ── Column definitions ──────────────────────────────────────────────────
@@ -265,6 +281,59 @@ public class ViewerPlugin implements NaborPlugin {
                 col("Starts", e -> fmt(e.startsAt()), 120, null, null, null),
                 col("Ends", e -> fmt(e.endsAt()), 120, null, null, null),
                 col("Max", e -> e.maxParticipants() != null ? String.valueOf(e.maxParticipants()) : "—", 60, null, null, null));
+    }
+
+    // ── Column extractors for filtering ──────────────────────────────────────
+
+    private Map<String, Function<Incident, String>> incidentExtractors() {
+        Map<String, Function<Incident, String>> m = new LinkedHashMap<>();
+        m.put("ID", Incident::id);
+        m.put("Title", Incident::title);
+        m.put("Description", Incident::description);
+        m.put("Severity", i -> i.severity().name());
+        m.put("Status", i -> i.status().name());
+        m.put("Reporter", Incident::reporterId);
+        m.put("Assigned", Incident::assignedTo);
+        m.put("Neighbourhood", i -> resolveNb(i.neighbourhoodId()));
+        m.put("Created", i -> fmt(i.createdAt()));
+        m.put("Updated", i -> fmt(i.updatedAt()));
+        return m;
+    }
+
+    private Map<String, Function<User, String>> userExtractors() {
+        Map<String, Function<User, String>> m = new LinkedHashMap<>();
+        m.put("ID", User::id);
+        m.put("First Name", User::firstName);
+        m.put("Last Name", User::lastName);
+        m.put("Email", User::email);
+        m.put("Bio", u -> u.bio() != null ? u.bio() : "");
+        m.put("Role", u -> u.role().name());
+        m.put("Neighbourhood", u -> resolveNb(u.neighbourhoodId()));
+        return m;
+    }
+
+    private Map<String, Function<tech.nabor.api.model.listings.Listing, String>> listingExtractors() {
+        Map<String, Function<tech.nabor.api.model.listings.Listing, String>> m = new LinkedHashMap<>();
+        m.put("ID", tech.nabor.api.model.listings.Listing::id);
+        m.put("Title", tech.nabor.api.model.listings.Listing::title);
+        m.put("Description", tech.nabor.api.model.listings.Listing::description);
+        m.put("Type", l -> l.listingType().name());
+        m.put("Price", l -> String.valueOf(l.priceCents()));
+        m.put("Status", l -> l.status().name());
+        m.put("Creator", tech.nabor.api.model.listings.Listing::creatorId);
+        return m;
+    }
+
+    private Map<String, Function<tech.nabor.api.model.events.Evenement, String>> eventExtractors() {
+        Map<String, Function<tech.nabor.api.model.events.Evenement, String>> m = new LinkedHashMap<>();
+        m.put("ID", tech.nabor.api.model.events.Evenement::id);
+        m.put("Title", tech.nabor.api.model.events.Evenement::title);
+        m.put("Status", e -> e.status().name());
+        m.put("Creator", tech.nabor.api.model.events.Evenement::creatorId);
+        m.put("Starts", e -> fmt(e.startsAt()));
+        m.put("Ends", e -> fmt(e.endsAt()));
+        m.put("Max", e -> e.maxParticipants() != null ? String.valueOf(e.maxParticipants()) : "—");
+        return m;
     }
 
     // ── Edit dialog ─────────────────────────────────────────────────────────
@@ -450,8 +519,11 @@ public class ViewerPlugin implements NaborPlugin {
                 col("Neighbourhood ID", MappingNeighbourhood::neighbourhoodId, 200, null, null, null),
                 col("Name", MappingNeighbourhood::neighbourhoodName, 300, null, null, null));
         table.getItems().setAll(data);
+        Map<String, Function<MappingNeighbourhood, String>> cols = new LinkedHashMap<>();
+        cols.put("Neighbourhood ID", MappingNeighbourhood::neighbourhoodId);
+        cols.put("Name", MappingNeighbourhood::neighbourhoodName);
         return wrapTab(t("viewer.tab.neighbourhoods"), table, data,
-                n -> n.neighbourhoodId() + n.neighbourhoodName());
+                n -> n.neighbourhoodId() + n.neighbourhoodName(), cols);
     }
 
     // ── History tab ─────────────────────────────────────────────────────────
@@ -514,8 +586,13 @@ public class ViewerPlugin implements NaborPlugin {
         });
         table.getColumns().add(actionsCol);
         table.getItems().setAll(changes);
+        Map<String, Function<SyncChange, String>> cols = new LinkedHashMap<>();
+        cols.put("Op", SyncChange::operation);
+        cols.put("Table", SyncChange::tableName);
+        cols.put("Row", SyncChange::rowId);
+        cols.put("When", c -> fmt(c.changedAt()));
         return wrapTab(t("viewer.tab.history"), table, changes,
-                c -> c.tableName() + c.rowId() + c.operation());
+                c -> c.tableName() + c.rowId() + c.operation(), cols);
     }
 
     // ── Rollback ────────────────────────────────────────────────────────────
@@ -592,20 +669,54 @@ public class ViewerPlugin implements NaborPlugin {
     }
 
     private <T> Tab wrapTab(String title, TableView<T> table, List<T> data,
-                            Function<T, String> searchFn) {
+                            Function<T, String> searchFn,
+                            Map<String, Function<T, String>> columnExtractors) {
+        // Column filter dropdown
+        ComboBox<String> columnBox = new ComboBox<>();
+        columnBox.setPromptText(t("viewer.filter.column"));
+        columnBox.setMinWidth(150);
+        columnBox.setMaxWidth(200);
+        List<String> colNames = new ArrayList<>();
+        colNames.add(t("viewer.filter.all"));
+        colNames.addAll(columnExtractors.keySet());
+        columnBox.setItems(FXCollections.observableArrayList(colNames));
+        columnBox.getSelectionModel().selectFirst();
+
+        // Text filter
         TextField filter = new TextField();
         filter.setPromptText(t("viewer.filter"));
-        filter.setStyle("-fx-max-width: 300px;");
+        filter.setMinWidth(180);
+        HBox.setHgrow(filter, Priority.ALWAYS);
+
         FilteredList<T> filtered = new FilteredList<>(FXCollections.observableArrayList(data), p -> true);
-        filter.textProperty().addListener((obs, old, text) ->
+
+        Runnable updateFilter = () -> {
+            String text = filter.getText();
+            String selectedCol = columnBox.getValue();
+            boolean allColumns = selectedCol == null
+                    || selectedCol.equals(t("viewer.filter.all"));
+            Function<T, String> colFn = allColumns ? null : columnExtractors.get(selectedCol);
+
             filtered.setPredicate(item -> {
                 if (text == null || text.isBlank()) return true;
                 String lower = text.toLowerCase();
+                if (colFn != null) {
+                    String val = colFn.apply(item);
+                    return val != null && val.toLowerCase().contains(lower);
+                }
                 String search = searchFn.apply(item);
                 return search != null && search.toLowerCase().contains(lower);
-            }));
+            });
+        };
+
+        filter.textProperty().addListener((obs, old, text) -> updateFilter.run());
+        columnBox.valueProperty().addListener((obs, old, val) -> updateFilter.run());
+
         table.setItems(filtered);
-        VBox box = new VBox(6, filter, table);
+
+        HBox filterBar = new HBox(8, columnBox, filter);
+
+        VBox box = new VBox(6, filterBar, table);
         VBox.setVgrow(table, Priority.ALWAYS);
         box.setPadding(new Insets(8, 0, 0, 0));
         Tab tab = new Tab(title, box);
