@@ -17,7 +17,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class SocialPlugin implements NaborPlugin {
 
@@ -25,13 +24,12 @@ public class SocialPlugin implements NaborPlugin {
     private ResourceBundle bundle;
 
     private VBox root;
-    private ComboBox<String> userBox;
+    private TextField userIdField;
     private Label followersLabel, followingLabel, friendsLabel;
     private TableView<String[]> followersTable, followingTable, friendsTable;
     private Label placeholder;
 
     private Map<String, String> userNames = Map.of();
-    private Map<String, String> userIdByDisplay = Map.of();
 
     @Override public String getId() { return "plugin-social"; }
     @Override public String getDisplayName() { return "Social Graph"; }
@@ -71,13 +69,10 @@ public class SocialPlugin implements NaborPlugin {
         Label titleLabel = new Label(t("social.title"));
         titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
-        userBox = new ComboBox<>();
-        userBox.setPromptText(t("social.select"));
-        userBox.setMaxWidth(300);
-        List<String> sorted = new ArrayList<>(userNames.values());
-        Collections.sort(sorted);
-        userBox.setItems(FXCollections.observableArrayList(sorted));
-        userBox.valueProperty().addListener((o, old, val) -> onUserSelected(val));
+        userIdField = new TextField();
+        userIdField.setPromptText(t("social.prompt"));
+        userIdField.setMaxWidth(300);
+        userIdField.setOnAction(e -> onUserIdEntered(userIdField.getText().strip()));
 
         followersTable = buildTable();
         followingTable = buildTable();
@@ -100,11 +95,11 @@ public class SocialPlugin implements NaborPlugin {
         VBox.setVgrow(tabs, Priority.ALWAYS);
 
         root = new VBox(12, titleLabel,
-                new Label(t("social.select")), userBox,
+                new Label(t("social.enterId")), userIdField,
                 tabs, placeholder);
         root.setPadding(new Insets(16));
 
-        onUserSelected(null);
+        clearTables();
     }
 
     private Tab tab(Label header, TableView<String[]> table) {
@@ -138,11 +133,9 @@ public class SocialPlugin implements NaborPlugin {
 
     private void loadUserNames() {
         userNames = new LinkedHashMap<>();
-        userIdByDisplay = new LinkedHashMap<>();
         for (User u : ctx.getDb().users().findAll()) {
             String display = u.firstName() + " " + u.lastName() + " (" + u.role().name() + ")";
             userNames.put(u.id(), display);
-            userIdByDisplay.put(display, u.id());
         }
     }
 
@@ -150,19 +143,21 @@ public class SocialPlugin implements NaborPlugin {
         return userNames.getOrDefault(userId, userId);
     }
 
-    // ── Selection ───────────────────────────────────────────────────────────
+    // ── Input ────────────────────────────────────────────────────────────────
 
-    private void onUserSelected(String displayName) {
-        if (displayName == null) {
-            followersTable.getItems().clear();
-            followingTable.getItems().clear();
-            friendsTable.getItems().clear();
-            placeholder.setVisible(true);
+    private void clearTables() {
+        followersTable.getItems().clear();
+        followingTable.getItems().clear();
+        friendsTable.getItems().clear();
+        placeholder.setVisible(true);
+    }
+
+    private void onUserIdEntered(String userId) {
+        if (userId == null || userId.isBlank()) {
+            clearTables();
             return;
         }
         placeholder.setVisible(false);
-        String userId = userIdByDisplay.get(displayName);
-        if (userId == null) return;
 
         // Followers: who follows this user
         List<Follow> followers = ctx.getDb().follows().findFollowersByUserId(userId);
