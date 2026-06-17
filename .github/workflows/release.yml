@@ -19,13 +19,13 @@ jobs:
         with:
           fetch-depth: 0 # Fetch full history so we can verify branch ancestry
 
-      - name: Verify tag is on main branch
+      - name: Verify tag is on master branch
         run: |
-          if ! git branch -r --contains "${{ github.ref }}" | grep -q 'origin/main'; then
-            echo "::error::Tag ${{ github.ref_name }} is not on the main branch. Releases must be tagged from main."
+          if ! git branch -r --contains "${{ github.ref }}" | grep -q 'origin/master'; then
+            echo "::error::Tag ${{ github.ref_name }} is not on the master branch. Releases must be tagged from master."
             exit 1
           fi
-          echo "Tag ${{ github.ref_name }} is on main — proceeding with release."
+          echo "Tag ${{ github.ref_name }} is on master — proceeding with release."
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
