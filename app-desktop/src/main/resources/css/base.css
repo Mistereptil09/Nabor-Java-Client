@@ -77,12 +77,99 @@
 }
 .theme-button:hover { -fx-background-color: derive(-nabor-primary, 30%); -fx-background-radius: 6; }
 
+/* ── TabPane ─────────────────────────────────────────────── */
+.tab-pane {
+    -fx-background-color: transparent;
+}
+
+/* The background behind the tabs */
+.tab-pane .tab-header-background {
+    -fx-background-color: -nabor-surface;
+}
+
+/* Unselected tabs */
+.tab-pane .tab {
+    -fx-background-color: derive(-nabor-surface, 10%);
+    -fx-background-radius: 6 6 0 0;
+    -fx-background-insets: 0 1 0 0;
+    -fx-padding: 6 16 6 16;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-text-fill: -nabor-text-muted;
+}
+
+/* Hovered tabs */
+.tab-pane .tab:hover {
+    -fx-background-color: derive(-nabor-surface, 20%);
+}
+
+/* Selected tab */
+.tab-pane .tab:selected {
+    -fx-background-color: -nabor-primary;
+}
+
+.tab-pane .tab:selected .tab-label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+/* Remove the default blue focus ring */
+.tab-pane:focus > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-width: 0;
+}
+
+/* ── ScrollPane ────────────────────────────── */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    /* Adds a subtle border around the scrollable area */
+    -fx-border-color: derive(-nabor-text-muted, 60%);
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
+/* Targets the internal area that is white */
+.scroll-pane > .viewport {
+    -fx-background-color: -nabor-surface;
+}
+
+
+/* ── CheckBox ──────────────────────────── */
+.check-box {
+    -fx-text-fill: -nabor-text;
+}
+
+/* Unchecked square */
+.check-box .box {
+    -fx-background-color: -nabor-bg; /* Darker inner background */
+    -fx-border-color: derive(-nabor-text-muted, 40%);
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+/* Checked square */
+.check-box:selected .box {
+    -fx-background-color: -nabor-accent; /* Make it orange when checked */
+    -fx-border-color: -nabor-accent;
+}
+
+/* Tick mark icon */
+.check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+.check-box:hover .box {
+    -fx-border-color: -nabor-accent;
+}
+
 /* ── Zone de contenu ─────────────────────────────────────── */
 .content-area { -fx-background-color: -nabor-bg; }
 .content-area .label { -fx-text-fill: -nabor-text; }
 .placeholder { -fx-text-fill: -nabor-text-muted; -fx-font-size: 14px; }
 
-/* ── Écrans cœur (étape 7) ───────────────────────────────── */
+/* ── Écrans cœur ───────────────────────────────── */
 .screen-toolbar { -fx-background-color: -nabor-surface; }
 .screen-title   { -fx-text-fill: -nabor-text; -fx-font-size: 18px; -fx-font-weight: bold; }
 .detail-pane    { -fx-background-color: -nabor-surface; }
@@ -127,7 +214,7 @@
 }
 .danger-button:hover { -fx-background-color: derive(-nabor-error, -10%); }
 
-/* ── Statistiques (étape 8) ──────────────────────────────── */
+/* ── Statistiques ──────────────────────────────── */
 /* ScrollPane transparent pour rester cohérent avec le thème. */
 .content-area > .viewport { -fx-background-color: transparent; }
 .scroll-pane { -fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; }
@@ -159,7 +246,7 @@
 .tile-header .label { -fx-text-fill: -nabor-text; -fx-font-size: 13px; -fx-font-weight: bold; }
 .tile-content { -fx-padding: 8; -fx-background-radius: 0 0 10 10; }
 
-/* ── Écran de connexion (étape 6) ────────────────────────── */
+/* ── Écran de connexion ────────────────────────── */
 .login-title    { -fx-text-fill: -nabor-primary; -fx-font-size: 22px; -fx-font-weight: bold; }
 .login-subtitle { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }
 .login-status   { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }

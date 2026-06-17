@@ -44,7 +44,6 @@ public class NaborApp extends Application {
     @Override
     public void init() {
         app = Bootstrap.create();
-        System.out.println("Just to make it different from the github version");
     }
 
     @Override
