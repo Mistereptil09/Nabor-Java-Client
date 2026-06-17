@@ -227,6 +227,10 @@ public class UpdateService {
             byte[] buffer = new byte[4096];
             while ((entry = zis.getNextEntry()) != null) {
                 File newFile = new File(destDir, entry.getName());
+                // Prevent Zip Slip: ensure resolved path stays within destDir
+                if (!newFile.toPath().normalize().startsWith(destDir.toPath())) {
+                    throw new IOException("Bad zip entry: " + entry.getName());
+                }
                 if (entry.isDirectory()) {
                     newFile.mkdirs();
                 } else {
