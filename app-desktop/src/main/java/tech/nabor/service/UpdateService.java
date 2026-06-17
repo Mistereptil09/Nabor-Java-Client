@@ -45,7 +45,7 @@ public class UpdateService {
                 }
             }
         } catch (Exception ignored) {}
-        return "0.9.3";
+        return "0.9.8-SNAPSHOT";
     }
 
 
@@ -65,6 +65,7 @@ public class UpdateService {
         try {
             String json;
             String checkUrl = System.getProperty("nabor.update.checkUrl", "/updates/latest");
+            System.out.println("[UpdateService] [HTTP Request] Checking for updates at: GET " + checkUrl);
             if (checkUrl.startsWith("http://") || checkUrl.startsWith("https://")) {
                 HttpClient client = HttpClient.newBuilder()
                         .version(HttpClient.Version.HTTP_1_1)
@@ -74,21 +75,31 @@ public class UpdateService {
                         .header("User-Agent", "Java-Nabor-Client-Updater")
                         .GET()
                         .build();
-                json = client.send(request, HttpResponse.BodyHandlers.ofString()).body();
+                System.out.println("[UpdateService] [HTTP Request] Headers: User-Agent=Java-Nabor-Client-Updater");
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                System.out.println("[UpdateService] [HTTP Response] Received status code: " + response.statusCode());
+                json = response.body();
             } else {
                 json = http.get(checkUrl);
             }
 
+            System.out.println("[UpdateService] [HTTP Response] Body: " + json);
             JsonNode root = mapper.readTree(json);
             String latestVersion = root.path("version").asText(CURRENT_VERSION);
             String sha256 = root.path("sha256").asText("");
             String changelogUrl = root.path("changelog_url").asText("");
             String downloadUrl = root.path("download_url").asText("");
+            
+            System.out.println("[UpdateService] Parsed update metadata: latestVersion=\"" + latestVersion 
+                    + "\", sha256=\"" + sha256 + "\", downloadUrl=\"" + downloadUrl + "\"");
 
             boolean available = isNewerVersion(CURRENT_VERSION, latestVersion);
+            System.out.println("[UpdateService] Version check: current=\"" + CURRENT_VERSION 
+                    + "\" vs latest=\"" + latestVersion + "\" -> updateAvailable=" + available);
             return new UpdateInfo(available, latestVersion, sha256, changelogUrl, downloadUrl);
         } catch (Exception e) {
-            System.err.println("[UpdateService] Failed to check for updates: " + e.getMessage());
+            System.err.println("[UpdateService] [HTTP Error] Failed to check for updates: " + e.getMessage());
+            e.printStackTrace();
             return new UpdateInfo(false, CURRENT_VERSION, "", null, null);
         }
     }
@@ -101,6 +112,7 @@ public class UpdateService {
         if (finalUrl == null || finalUrl.isBlank()) {
             finalUrl = AppNaborHttpClient.BASE_URL + "/updates/download";
         }
+        System.out.println("[UpdateService] [HTTP Request] Downloading update from: GET " + finalUrl);
         
         HttpClient client = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
@@ -115,11 +127,14 @@ public class UpdateService {
         File tempFile = File.createTempFile("nabor-update-", ".zip.tmp");
         tempFile.deleteOnExit();
 
+        System.out.println("[UpdateService] [HTTP Request] Writing download stream to: " + tempFile.getAbsolutePath());
         HttpResponse<Path> response = client.send(request, HttpResponse.BodyHandlers.ofFile(tempFile.toPath()));
+        System.out.println("[UpdateService] [HTTP Response] Download status code: " + response.statusCode());
         if (response.statusCode() != 200) {
             throw new IOException("Failed to download update. Server returned HTTP " + response.statusCode());
         }
 
+        System.out.println("[UpdateService] Update downloaded successfully (size: " + tempFile.length() + " bytes)");
         return tempFile;
     }
 

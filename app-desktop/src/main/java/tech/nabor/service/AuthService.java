@@ -98,8 +98,10 @@ public class AuthService {
                 .timeout(Duration.ofSeconds(10))
                 .POST(HttpRequest.BodyPublishers.noBody())
                 .build();
+        System.out.println("[AuthService] [HTTP Request] Sending token refresh request: POST " + req.uri());
         try {
             var resp = client.send(req, HttpResponse.BodyHandlers.ofString());
+            System.out.println("[AuthService] [HTTP Response] Token refresh status: " + resp.statusCode() + " | Body: " + resp.body());
             if (resp.statusCode() == 401 || resp.statusCode() == 403) {
                 throw new IOException("HTTP 401 — token rejected");
             }
@@ -114,8 +116,12 @@ public class AuthService {
             String newRefresh = root.path("refresh_token").asText(refreshToken);
             return new Session(newAccess, newRefresh);
         } catch (InterruptedException e) {
+            System.err.println("[AuthService] [HTTP Error] Token refresh interrupted: " + e.getMessage());
             Thread.currentThread().interrupt();
             throw new IOException("Refresh interrupted", e);
+        } catch (IOException e) {
+            System.err.println("[AuthService] [HTTP Error] Token refresh failed: " + e.getMessage());
+            throw e;
         }
     }
 

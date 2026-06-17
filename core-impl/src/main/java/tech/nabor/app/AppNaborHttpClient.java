@@ -67,23 +67,27 @@ public class AppNaborHttpClient implements NaborHttpClient {
 
     @Override
     public String get(String endpoint) throws IOException {
+        System.out.println("[AppNaborHttpClient] [HTTP Request] GET " + BASE_URL + endpoint);
         return sendWithRetry(() -> base(endpoint).GET().build());
     }
 
     @Override
     public String post(String endpoint, String jsonBody) throws IOException {
+        System.out.println("[AppNaborHttpClient] [HTTP Request] POST " + BASE_URL + endpoint + " | Body: " + jsonBody);
         return sendWithRetry(() ->
                 base(endpoint).POST(HttpRequest.BodyPublishers.ofString(jsonBody)).build());
     }
 
     @Override
     public String put(String endpoint, String jsonBody) throws IOException {
+        System.out.println("[AppNaborHttpClient] [HTTP Request] PUT " + BASE_URL + endpoint + " | Body: " + jsonBody);
         return sendWithRetry(() ->
                 base(endpoint).PUT(HttpRequest.BodyPublishers.ofString(jsonBody)).build());
     }
 
     @Override
     public String delete(String endpoint) throws IOException {
+        System.out.println("[AppNaborHttpClient] [HTTP Request] DELETE " + BASE_URL + endpoint);
         return sendWithRetry(() -> base(endpoint).DELETE().build());
     }
 
@@ -103,11 +107,14 @@ public class AppNaborHttpClient implements NaborHttpClient {
             if (e.getMessage() != null && e.getMessage().contains("UNAUTHORIZED")
                     && tokenRefresher != null) {
                 try {
+                    System.out.println("[AppNaborHttpClient] Unauthorized 401 detected. Attempting token refresh...");
                     String newToken = tokenRefresher.refresh();
                     this.token = newToken;
                     // Retry once with the new token
+                    System.out.println("[AppNaborHttpClient] Token refreshed successfully. Retrying request...");
                     return sendRequest(requestBuilder.get());
                 } catch (IOException refreshError) {
+                    System.err.println("[AppNaborHttpClient] Token refresh failed: " + refreshError.getMessage());
                     throw new IOException("Token refresh failed: " + refreshError.getMessage(), refreshError);
                 }
             }
@@ -117,7 +124,9 @@ public class AppNaborHttpClient implements NaborHttpClient {
 
     private String sendRequest(HttpRequest request) throws IOException {
         try {
+            System.out.println("[AppNaborHttpClient] [HTTP Request] Sending request: " + request.method() + " " + request.uri());
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println("[AppNaborHttpClient] [HTTP Response] Status: " + response.statusCode() + " | Body: " + response.body());
             if (response.statusCode() == 401) {
                 var msg = "Session expired — please reconnect.";
                 publishError(msg);
@@ -130,6 +139,7 @@ public class AppNaborHttpClient implements NaborHttpClient {
             }
             return response.body();
         } catch (IOException e) {
+            System.err.println("[AppNaborHttpClient] [HTTP Error] Exception during request to " + request.uri() + ": " + e.getMessage());
             // Only publish if not already published above (401/4xx/5xx)
             if (e.getMessage() == null || !e.getMessage().startsWith("HTTP ")
                     && !e.getMessage().startsWith("UNAUTHORIZED")) {
@@ -137,6 +147,7 @@ public class AppNaborHttpClient implements NaborHttpClient {
             }
             throw e;
         } catch (InterruptedException e) {
+            System.err.println("[AppNaborHttpClient] [HTTP Error] Interrupted request to " + request.uri() + ": " + e.getMessage());
             Thread.currentThread().interrupt();
             publishError("Request interrupted");
             throw new IOException("Requête interrompue", e);

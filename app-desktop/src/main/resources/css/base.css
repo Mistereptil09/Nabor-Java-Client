@@ -96,6 +96,28 @@
     -fx-cursor: hand;
 }
 .accent-button:hover { -fx-background-color: derive(-nabor-accent, -10%); }
+.accent-button:showing {
+    -fx-background-radius: 8 8 8 0;
+}
+.accent-button .label { -fx-text-fill: white; }
+.accent-button .arrow { -fx-background-color: white; }
+
+/* MenuButton popup — match accent, rounded at bottom */
+.accent-button > .arrow-button { -fx-padding: 0 8 0 0; }
+.accent-button .context-menu {
+    -fx-background-color: -nabor-accent;
+    -fx-background-radius: 0 0 8 8;
+    -fx-padding: 4 0 4 0;
+}
+.accent-button .menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 6 14 6 14;
+}
+.accent-button .menu-item .label { -fx-text-fill: white; }
+.accent-button .menu-item:hover {
+    -fx-background-color: derive(-nabor-accent, -10%);
+}
+.accent-button .menu-item:hover .label { -fx-text-fill: white; }
 .danger-button {
     -fx-background-color: -nabor-error;
     -fx-text-fill: white;
@@ -118,6 +140,24 @@
 }
 .kpi-value { -fx-text-fill: -nabor-primary; -fx-font-size: 30px; -fx-font-weight: bold; }
 .kpi-label { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }
+
+/* ── Dashboard tiles ─────────────────────────────────────── */
+.dashboard-tile {
+    -fx-background-color: -nabor-surface;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: derive(-nabor-text-muted, 60%);
+    -fx-border-width: 0.5;
+}
+.tile-header {
+    -fx-padding: 6 10 6 10;
+    -fx-background-color: derive(-nabor-surface, -5%);
+    -fx-background-radius: 10 10 0 0;
+    -fx-cursor: hand;
+    -fx-alignment: CENTER_LEFT;
+}
+.tile-header .label { -fx-text-fill: -nabor-text; -fx-font-size: 13px; -fx-font-weight: bold; }
+.tile-content { -fx-padding: 8; -fx-background-radius: 0 0 10 10; }
 
 /* ── Écran de connexion (étape 6) ────────────────────────── */
 .login-title    { -fx-text-fill: -nabor-primary; -fx-font-size: 22px; -fx-font-weight: bold; }

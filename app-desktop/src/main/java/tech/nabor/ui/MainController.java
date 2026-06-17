@@ -18,6 +18,7 @@ import tech.nabor.AppContext;
 import tech.nabor.api.ConnectedUser;
 import tech.nabor.api.NaborPlugin;
 import tech.nabor.api.error.NaborException;
+import tech.nabor.ui.dashboard.DashboardController;
 import tech.nabor.ui.i18n.I18nManager;
 import tech.nabor.ui.theme.ThemeManager;
 import tech.nabor.api.model.user.User;
@@ -125,9 +126,9 @@ public class MainController {
             showView(incidentsView);
         }
 
-        Node statsView = loadScreen("/fxml/statistics-view.fxml");
-        if (statsView != null) {
-            statsNavButton = addNavItem("Statistiques", statsView);
+        Node dashboardView = loadScreen("/fxml/dashboard-view.fxml");
+        if (dashboardView != null) {
+            statsNavButton = addNavItem("Dashboard", dashboardView);
         }
 
         Node settingsView = loadScreen("/fxml/settings-view.fxml");
@@ -167,8 +168,9 @@ public class MainController {
             Object controller = loader.getController();
             if (controller instanceof IncidentsController incidents) {
                 incidents.init(app, i18n);
-            } else if (controller instanceof StatisticsController statistics) {
-                statistics.init(app, i18n);
+            } else if (controller instanceof DashboardController dashboard) {
+                dashboard.init(app, i18n);
+                return dashboard.getView();
             } else if (controller instanceof SettingsController settings) {
                 settings.init(app, i18n, themeManager);
             }
