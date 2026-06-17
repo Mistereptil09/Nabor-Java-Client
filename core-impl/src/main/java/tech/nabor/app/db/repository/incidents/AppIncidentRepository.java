@@ -48,6 +48,15 @@ public class AppIncidentRepository implements IncidentRepository {
     // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
+    public List<Incident> findAll() {
+        return jdbi.withHandle(h ->
+                h.createQuery("SELECT * FROM incidents ORDER BY created_at DESC")
+                        .map(new IncidentMapper())
+                        .list()
+        );
+    }
+
+    @Override
     public Optional<Incident> findById(String id) {
         return jdbi.withHandle(h ->
                 h.createQuery("SELECT * FROM incidents WHERE id = :id")
@@ -190,6 +199,13 @@ public class AppIncidentRepository implements IncidentRepository {
                         .bind("resolvedAt",       InstantMapper.toLong(incident.resolvedAt()))
                         .execute()
         );
+    }
+
+    @Override
+    public void delete(String id) {
+        jdbi.useHandle(h ->
+                h.createUpdate("DELETE FROM incidents WHERE id = :id")
+                        .bind("id", id).execute());
     }
 
     @Override

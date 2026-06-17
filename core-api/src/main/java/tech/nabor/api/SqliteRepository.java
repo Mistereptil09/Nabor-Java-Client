@@ -61,6 +61,8 @@ public interface SqliteRepository {
     // sync db
     SyncChangelogRepository syncChangelog();
     SyncStateRepository syncState();             // for last_synced_at and others.
+    MappingNeighbourhoodRepository mappingNeighbourhoods();
+    SyncWhitelistRepository syncWhitelist();
     PendingConflictRepository pendingConflicts();
     ResolvedConflictRepository resolvedConflicts();
 }

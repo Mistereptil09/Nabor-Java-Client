@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="tech.nabor.ui.StatisticsController"
+            styleClass="content-area">
+
+    <top>
+        <HBox spacing="12" alignment="CENTER_LEFT" styleClass="screen-toolbar">
+            <padding>
+                <Insets top="14" right="16" bottom="14" left="16"/>
+            </padding>
+            <Label fx:id="screenTitle" styleClass="screen-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+        </HBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true" styleClass="content-area">
+        <VBox spacing="18">
+            <padding>
+                <Insets top="16" right="16" bottom="16" left="16"/>
+            </padding>
+
+            <!-- Cartes KPI : grille 3 colonnes égales pour un alignement parfait -->
+            <GridPane fx:id="kpiGrid" hgap="14" vgap="14">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="33.33" hgrow="ALWAYS"/>
+                    <ColumnConstraints percentWidth="33.33" hgrow="ALWAYS"/>
+                    <ColumnConstraints percentWidth="33.33" hgrow="ALWAYS"/>
+                </columnConstraints>
+
+                <VBox styleClass="kpi-card" GridPane.rowIndex="0" GridPane.columnIndex="0">
+                    <Label fx:id="kpiIncidentsValue" styleClass="kpi-value"/>
+                    <Label fx:id="kpiIncidentsLabel" styleClass="kpi-label"/>
+                </VBox>
+                <VBox styleClass="kpi-card" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                    <Label fx:id="kpiEventsValue" styleClass="kpi-value"/>
+                    <Label fx:id="kpiEventsLabel" styleClass="kpi-label"/>
+                </VBox>
+                <VBox styleClass="kpi-card" GridPane.rowIndex="0" GridPane.columnIndex="2">
+                    <Label fx:id="kpiRegistrationsValue" styleClass="kpi-value"/>
+                    <Label fx:id="kpiRegistrationsLabel" styleClass="kpi-label"/>
+                </VBox>
+
+                <VBox styleClass="kpi-card" GridPane.rowIndex="1" GridPane.columnIndex="0">
+                    <Label fx:id="kpiResolutionValue" styleClass="kpi-value"/>
+                    <Label fx:id="kpiResolutionLabel" styleClass="kpi-label"/>
+                </VBox>
+                <VBox styleClass="kpi-card" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                    <Label fx:id="kpiPickupValue" styleClass="kpi-value"/>
+                    <Label fx:id="kpiPickupLabel" styleClass="kpi-label"/>
+                </VBox>
+                <VBox styleClass="kpi-card" GridPane.rowIndex="1" GridPane.columnIndex="2">
+                    <Label fx:id="kpiWeekHoursValue" styleClass="kpi-value"/>
+                    <Label fx:id="kpiWeekHoursLabel" styleClass="kpi-label"/>
+                </VBox>
+            </GridPane>
+
+            <VBox fx:id="chartsBox" spacing="18" fillWidth="true"/>
+        </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

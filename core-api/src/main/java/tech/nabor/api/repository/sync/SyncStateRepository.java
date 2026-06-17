@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.Optional;
 
 public interface SyncStateRepository {
-    Optional<SyncState> get();                          // one line — id = 1
-    void save(SyncState state);                         // insert or update
-    void updateLastSyncedAt(Instant syncedAt);          // after a successful push
-    void updateSyncToken(String token);                 // token retuned by NestJS
-    void setRollingBack(boolean rollingBack);           // flag rollback in action
+    Optional<SyncState> get();
+    void save(SyncState state);
+    void updateLatestCursor(String cursor);             // after a complete sync
+    void updateResumeCursor(String cursor);             // after each page (crash recovery)
+    void setRollingBack(boolean rollingBack);
 }

@@ -56,6 +56,15 @@ public class AppEvenementRepository implements EvenementRepository {
     // ── Queries ───────────────────────────────────────────────────────────────
 
     @Override
+    public List<Evenement> findAll() {
+        return jdbi.withHandle(h ->
+                h.createQuery("SELECT * FROM evenements WHERE deleted_at IS NULL ORDER BY created_at DESC")
+                        .map(new EvenementMapper())
+                        .list()
+        );
+    }
+
+    @Override
     public Optional<Evenement> findById(String id) {
         return jdbi.withHandle(h ->
                 h.createQuery("SELECT * FROM evenements WHERE id = :id")

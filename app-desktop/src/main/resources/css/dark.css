@@ -1,0 +1,12 @@
+/*
+ * dark.css — thème sombre (§7.6 / §12.3).
+ * background #1A1A2E · primary #2D4A8A · accent #F7931E
+ */
+.root {
+    -nabor-bg:      #1A1A2E;
+    -nabor-surface: #232342;
+    -nabor-primary: #2D4A8A;
+    -nabor-accent:  #F7931E;
+    -nabor-text:    #FFFFFF;
+    -nabor-text-muted: #B0B0C0;
+}

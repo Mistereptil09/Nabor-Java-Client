@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="tech.nabor.ui.MainController"
+            prefWidth="1024" prefHeight="720">
+
+    <top>
+        <HBox fx:id="topBar" alignment="CENTER_LEFT" spacing="12" styleClass="top-bar">
+            <padding>
+                <Insets top="12" right="16" bottom="12" left="16"/>
+            </padding>
+            <Label fx:id="titleLabel" text="Nabor Services" styleClass="app-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="userLabel" styleClass="user-label"/>
+            <Label fx:id="onlineLabel" styleClass="online-label"/>
+        </HBox>
+    </top>
+
+    <left>
+        <ScrollPane fitToWidth="true" styleClass="sidebar-scroll">
+            <VBox fx:id="navBox" spacing="6" prefWidth="220" styleClass="sidebar">
+                <padding>
+                    <Insets top="12" right="8" bottom="12" left="8"/>
+                </padding>
+            </VBox>
+        </ScrollPane>
+    </left>
+
+    <center>
+        <StackPane fx:id="contentArea" styleClass="content-area">
+            <Label fx:id="placeholderLabel"
+                   text="Sélectionne un module dans le menu de gauche"
+                   styleClass="placeholder"/>
+        </StackPane>
+    </center>
+
+</BorderPane>

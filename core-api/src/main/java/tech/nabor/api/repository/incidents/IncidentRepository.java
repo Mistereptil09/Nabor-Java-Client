@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IncidentRepository {
+    List<Incident> findAll();
     Optional<Incident> findById(String id);
     List<Incident> findByReporterId(String reporterId);
     List<Incident> findByAssignedTo(String userId);
@@ -16,6 +17,7 @@ public interface IncidentRepository {
     List<Incident> findBySeverity(IncidentSeverity severity, int limit);
     List<Incident> findOpen(String neighbourhoodId, int limit);  // status = open or in_progress
     void save(Incident incident);
-    void assign(String id, String userId);               // changes assigned_to + assigned_at
-    void resolve(String id);                             // changes status = resolved + resolved_at
+    void delete(String id);                              // hard delete (not tracked)
+    void assign(String id, String userId);
+    void resolve(String id);
 }

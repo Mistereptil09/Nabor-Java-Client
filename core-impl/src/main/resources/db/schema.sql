@@ -52,6 +52,20 @@ CREATE TABLE IF NOT EXISTS user_notification_preferences (
 );
 
 -- ============================================================
+-- MAPPING QUARTIER
+-- ============================================================
+CREATE TABLE IF NOT EXISTS mapping_neighbourhood_id (
+    neighbourhood_id   TEXT NOT NULL PRIMARY KEY,
+    neighbourhood_name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sync_whitelist (
+    entity_type TEXT NOT NULL,
+    field_name  TEXT NOT NULL,
+    PRIMARY KEY (entity_type, field_name)
+);
+
+-- ============================================================
 -- RÉSEAU SOCIAL
 -- ============================================================
 
@@ -353,8 +367,8 @@ CREATE TABLE IF NOT EXISTS local_accounts (
                                 email         TEXT    NOT NULL,
                                 display_name  TEXT    NOT NULL,
                                 is_active     INTEGER NOT NULL DEFAULT 0,
-                                last_login_at INTEGER
-                                -- TODO add token for identification
+                                last_login_at INTEGER,
+                                refresh_token TEXT     -- for auto-login between reboots
 );
 
 CREATE TABLE IF NOT EXISTS app_locale_config (
@@ -382,10 +396,10 @@ CREATE TABLE IF NOT EXISTS plugin_config (
 );
 
 CREATE TABLE IF NOT EXISTS sync_state (
-                            id              INTEGER PRIMARY KEY CHECK (id = 1),
-                            last_synced_at  INTEGER,
-                            last_sync_token TEXT,
-                            is_rolling_back INTEGER NOT NULL DEFAULT 0  -- 1 = rollback en cours
+                            id                 INTEGER PRIMARY KEY CHECK (id = 1),
+                            latest_sync_cursor TEXT,
+                            resume_cursor      TEXT,
+                            is_rolling_back    INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sync_changelog (
@@ -393,20 +407,20 @@ CREATE TABLE IF NOT EXISTS sync_changelog (
                                 table_name      TEXT    NOT NULL,
                                 row_id          TEXT    NOT NULL,
                                 operation       TEXT    NOT NULL CHECK (operation IN ('INSERT','UPDATE','DELETE')),
-                                changed_fields  TEXT,   -- JSON : ["severity", "status"]
-                                previous_values TEXT,   -- JSON : {"severity": "low", "status": "open"} — valeurs AVANT
-                                new_values      TEXT,   -- JSON : {"severity": "high", "status": "in_progress"} — valeurs APRÈS
-                                changed_at      INTEGER NOT NULL,
-                                synced_at       INTEGER
+                                changed_fields  TEXT,
+                                previous_values TEXT,
+                                new_values      TEXT,
+                                base_updated_at TEXT,
+                                changed_at      INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS pending_conflicts (
                                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
                                    table_name     TEXT    NOT NULL,
                                    row_id         TEXT    NOT NULL,
-                                   field_name     TEXT    NOT NULL,
-                                   local_value    TEXT    NOT NULL,
-                                   remote_value   TEXT    NOT NULL,
+                                   field_name     TEXT,            -- NULL = whole-record conflict
+                                   local_value    TEXT    NOT NULL,  -- JSON: client_data from conflict response
+                                   remote_value   TEXT    NOT NULL,  -- JSON: server_data from conflict response
                                    detected_at    INTEGER NOT NULL
 );
 

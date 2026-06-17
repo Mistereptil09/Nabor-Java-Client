@@ -39,6 +39,11 @@ public class MockSqliteRepository implements SqliteRepository {
         // Return a mock that returns empty results
         return new UserRepository() {
             @Override
+            public java.util.List<tech.nabor.api.model.user.User> findAll() {
+                return java.util.List.of();
+            }
+
+            @Override
             public java.util.Optional<tech.nabor.api.model.user.User> findById(String id) {
                 return java.util.Optional.empty();
             }
@@ -193,6 +198,11 @@ public class MockSqliteRepository implements SqliteRepository {
         // Return a mock that returns empty results
         return new IncidentRepository() {
             @Override
+            public java.util.List<tech.nabor.api.model.incidents.Incident> findAll() {
+                return java.util.List.of();
+            }
+
+            @Override
             public java.util.List<tech.nabor.api.model.incidents.Incident> findByReporterId(String reporterId) {
                 System.out.println("[MockDB] Querying incidents for reporter: " + reporterId);
                 return java.util.List.of();
@@ -233,6 +243,10 @@ public class MockSqliteRepository implements SqliteRepository {
             }
 
             @Override
+            public void delete(String id) {
+            }
+
+            @Override
             public void assign(String id, String userId) {
             }
 
@@ -249,6 +263,16 @@ public class MockSqliteRepository implements SqliteRepository {
 
     @Override
     public SyncStateRepository syncState() {
+        return null;
+    }
+
+    @Override
+    public MappingNeighbourhoodRepository mappingNeighbourhoods() {
+        return null;
+    }
+
+    @Override
+    public SyncWhitelistRepository syncWhitelist() {
         return null;
     }
 

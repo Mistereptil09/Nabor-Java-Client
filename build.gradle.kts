@@ -5,7 +5,8 @@ plugins {
 
 allprojects {
     group = "tech.nabor"
-    version = "1.0-SNAPSHOT"
+    val customVersion = findProperty("version")?.toString()
+    version = if (customVersion != null && customVersion != "unspecified") customVersion else "0.9.8-SNAPSHOT"
 
     repositories {
         mavenCentral()

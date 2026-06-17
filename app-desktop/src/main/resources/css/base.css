@@ -1,0 +1,268 @@
+/*
+ * base.css — structure & règles communes à tous les thèmes.
+ * Les couleurs sont des "looked-up colors" (-nabor-*) définies ici par défaut
+ * et surchargées par default.css / dark.css (§7.6, §12.3).
+ */
+
+.root {
+    -nabor-primary: #0F2A5E;     /* navy */
+    -nabor-accent:  #F7931E;     /* orange */
+    -nabor-bg:      #FFFFFF;
+    -nabor-surface: #F7F7F8;
+    -nabor-text:    #1A1A2E;
+    -nabor-text-muted: #8C8C8C;
+    -nabor-success: #3DBD77;
+    -nabor-error:   #E8534A;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.top-bar {
+    -fx-background-color: -nabor-primary;
+    -fx-padding: 8 16 8 16;
+    -fx-spacing: 16;
+    -fx-alignment: CENTER_LEFT;
+}
+.app-title    { -fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold; }
+.user-label   { -fx-text-fill: white; -fx-font-size: 12px; }
+.online-label { -fx-text-fill: white; -fx-font-size: 12px; }
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+.sidebar-scroll { -fx-background-color: -nabor-surface; -fx-border-width: 0; }
+.sidebar-scroll > .viewport { -fx-background-color: -nabor-surface; }
+.sidebar { -fx-background-color: -nabor-surface; }
+
+/* ── Scrollbars ──────────────────────────────────────────── */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+    -fx-pref-height: 8;
+}
+.scroll-bar .track {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+}
+.scroll-bar .thumb {
+    -fx-background-color: derive(-nabor-text-muted, 20%);
+    -fx-background-radius: 4;
+    -fx-background-insets: 2;
+}
+.scroll-bar .thumb:hover {
+    -fx-background-color: derive(-nabor-text-muted, -10%);
+}
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow { -fx-shape: " "; }
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -nabor-text;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 14 10 14;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+.nav-button:hover  { -fx-background-color: derive(-nabor-primary, 75%); }
+.nav-button:pressed { -fx-background-color: derive(-nabor-primary, 60%); }
+
+.theme-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -nabor-text;
+    -fx-font-size: 16px;
+    -fx-cursor: hand;
+}
+.theme-button:hover { -fx-background-color: derive(-nabor-primary, 30%); -fx-background-radius: 6; }
+
+/* ── Zone de contenu ─────────────────────────────────────── */
+.content-area { -fx-background-color: -nabor-bg; }
+.content-area .label { -fx-text-fill: -nabor-text; }
+.placeholder { -fx-text-fill: -nabor-text-muted; -fx-font-size: 14px; }
+
+/* ── Écrans cœur (étape 7) ───────────────────────────────── */
+.screen-toolbar { -fx-background-color: -nabor-surface; }
+.screen-title   { -fx-text-fill: -nabor-text; -fx-font-size: 18px; -fx-font-weight: bold; }
+.detail-pane    { -fx-background-color: -nabor-surface; }
+.detail-title   { -fx-text-fill: -nabor-text; -fx-font-size: 15px; -fx-font-weight: bold; }
+.detail-meta    { -fx-text-fill: -nabor-text-muted; -fx-font-size: 12px; }
+.accent-button {
+    -fx-background-color: -nabor-accent;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-padding: 8 14 8 14;
+    -fx-cursor: hand;
+}
+.accent-button:hover { -fx-background-color: derive(-nabor-accent, -10%); }
+.accent-button:showing {
+    -fx-background-radius: 8 8 8 0;
+}
+.accent-button .label { -fx-text-fill: white; }
+.accent-button .arrow { -fx-background-color: white; }
+
+/* MenuButton popup — match accent, rounded at bottom */
+.accent-button > .arrow-button { -fx-padding: 0 8 0 0; }
+.accent-button .context-menu {
+    -fx-background-color: -nabor-accent;
+    -fx-background-radius: 0 0 8 8;
+    -fx-padding: 4 0 4 0;
+}
+.accent-button .menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 6 14 6 14;
+}
+.accent-button .menu-item .label { -fx-text-fill: white; }
+.accent-button .menu-item:hover {
+    -fx-background-color: derive(-nabor-accent, -10%);
+}
+.accent-button .menu-item:hover .label { -fx-text-fill: white; }
+.danger-button {
+    -fx-background-color: -nabor-error;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+.danger-button:hover { -fx-background-color: derive(-nabor-error, -10%); }
+
+/* ── Statistiques (étape 8) ──────────────────────────────── */
+/* ScrollPane transparent pour rester cohérent avec le thème. */
+.content-area > .viewport { -fx-background-color: transparent; }
+.scroll-pane { -fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; }
+
+.kpi-card {
+    -fx-background-color: -nabor-surface;
+    -fx-background-radius: 10;
+    -fx-padding: 16;
+    -fx-spacing: 4;
+}
+.kpi-value { -fx-text-fill: -nabor-primary; -fx-font-size: 30px; -fx-font-weight: bold; }
+.kpi-label { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }
+
+/* ── Dashboard tiles ─────────────────────────────────────── */
+.dashboard-tile {
+    -fx-background-color: -nabor-surface;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: derive(-nabor-text-muted, 60%);
+    -fx-border-width: 0.5;
+}
+.tile-header {
+    -fx-padding: 6 10 6 10;
+    -fx-background-color: derive(-nabor-surface, -5%);
+    -fx-background-radius: 10 10 0 0;
+    -fx-cursor: hand;
+    -fx-alignment: CENTER_LEFT;
+}
+.tile-header .label { -fx-text-fill: -nabor-text; -fx-font-size: 13px; -fx-font-weight: bold; }
+.tile-content { -fx-padding: 8; -fx-background-radius: 0 0 10 10; }
+
+/* ── Écran de connexion (étape 6) ────────────────────────── */
+.login-title    { -fx-text-fill: -nabor-primary; -fx-font-size: 22px; -fx-font-weight: bold; }
+.login-subtitle { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }
+.login-status   { -fx-text-fill: -nabor-text-muted; -fx-font-size: 13px; }
+.dev-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -nabor-text;
+    -fx-border-color: -nabor-text;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.dev-button:hover  { -fx-background-color: derive(-nabor-primary, 75%); }
+.dev-button:pressed { -fx-background-color: derive(-nabor-primary, 60%); }
+
+
+/* ── Contrôles JavaFX standards : rendre lisibles dans tous les thèmes ──── */
+
+/* Graphiques : titres, axes, légendes suivent la couleur du thème. */
+.chart { -fx-background-color: transparent; }
+.chart-title { -fx-text-fill: -nabor-text; -fx-font-size: 14px; -fx-font-weight: bold; }
+.axis { -fx-tick-label-fill: -nabor-text-muted; }
+.axis-label { -fx-text-fill: -nabor-text; }
+.chart-legend {
+    -fx-background-color: -nabor-surface;
+    -fx-background-radius: 8;
+}
+.chart-legend-item { -fx-text-fill: -nabor-text; }
+/* Le fond du tracé reste clair pour la lisibilité des barres/lignes. */
+.chart-plot-background { -fx-background-color: derive(-nabor-surface, 20%); }
+.chart-vertical-grid-lines, .chart-horizontal-grid-lines {
+    -fx-stroke: derive(-nabor-text-muted, 60%);
+}
+/* Étiquettes du camembert (Faible, Moyenne…) + leurs lignes de repère. */
+.chart-pie-label { -fx-fill: -nabor-text; -fx-font-size: 12px; }
+.chart-pie-label-line { -fx-stroke: -nabor-text-muted; }
+
+/* Tables : en-têtes, cellules, fond. */
+.table-view {
+    -fx-background-color: -nabor-surface;
+    -fx-table-cell-border-color: derive(-nabor-text-muted, 60%);
+}
+/* Modena dessine un dégradé clair sur ces 3 sous-régions : on les aplatit. */
+.table-view .column-header-background,
+.table-view .column-header,
+.table-view .filler,
+.table-view .column-header-background .filler {
+    -fx-background-color: derive(-nabor-primary, 20%);
+}
+.table-view .column-header .label { -fx-text-fill: white; -fx-font-weight: bold; }
+.table-view .column-header .arrow { -fx-background-color: white; }
+.table-view .table-cell { -fx-text-fill: -nabor-text; }
+.table-row-cell { -fx-background-color: -nabor-bg; }
+.table-row-cell:odd { -fx-background-color: derive(-nabor-surface, 3%); }
+.table-row-cell:selected { -fx-background-color: derive(-nabor-primary, 30%); }
+.table-row-cell:selected .table-cell { -fx-text-fill: white; }
+/* Lignes vides : même fond que la table (évite les rayures blanches en sombre). */
+.table-row-cell:empty { -fx-background-color: -nabor-surface; }
+
+/* ComboBox & listes déroulantes. */
+.combo-box, .choice-box {
+    -fx-background-color: -nabor-surface;
+    -fx-mark-color: -nabor-text;
+}
+.combo-box .list-cell { -fx-text-fill: -nabor-text; -fx-background-color: -nabor-surface; }
+.combo-box-popup .list-view { -fx-background-color: -nabor-surface; }
+.combo-box-popup .list-cell { -fx-text-fill: -nabor-text; }
+.combo-box-popup .list-cell:hover { -fx-background-color: derive(-nabor-primary, 40%); -fx-text-fill: white; }
+
+/* ColorPicker : champ + texte hex. */
+.color-picker {
+    -fx-background-color: -nabor-surface;
+    -fx-mark-color: -nabor-text;
+}
+.color-picker > .label { -fx-text-fill: -nabor-text; }
+.color-picker .color-picker-label .text { -fx-fill: -nabor-text; }
+
+/* Slider. */
+.slider .track { -fx-background-color: derive(-nabor-text-muted, 40%); }
+.slider .thumb { -fx-background-color: -nabor-primary; }
+.slider .axis { -fx-tick-label-fill: -nabor-text-muted; }
+
+/* Boîtes de dialogue (création d'incident, confirmation). */
+.dialog-pane { -fx-background-color: -nabor-bg; }
+.dialog-pane .label { -fx-text-fill: -nabor-text; }
+.dialog-pane .header-panel { -fx-background-color: -nabor-surface; }
+.dialog-pane .header-panel .label { -fx-text-fill: -nabor-text; }
+.text-field, .text-area {
+    -fx-background-color: -nabor-surface;
+    -fx-text-fill: -nabor-text;
+    -fx-prompt-text-fill: -nabor-text-muted;
+}
+.text-area .content { -fx-background-color: -nabor-surface; }
+
+/* Séparateurs. */
+.separator .line { -fx-border-color: derive(-nabor-text-muted, 50%); }
+
+/* ── Toasts (étape 3) ────────────────────────────────────── */
+.toast {
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-font-size: 13px;
+    -fx-padding: 10 14 10 14;
+}
+.toast-info    { -fx-background-color: -nabor-primary; }
+.toast-warning { -fx-background-color: -nabor-accent; }
+.toast-error   { -fx-background-color: -nabor-error; }

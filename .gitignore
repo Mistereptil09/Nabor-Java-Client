@@ -4,6 +4,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 .kotlin
+cahier_des_charges_nabor.md
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
@@ -43,3 +44,9 @@ bin/
 .DS_Store
 
 .idea/
+
+### Local app data ###
+# Base SQLite locale générée au runtime (offline-first) — ne pas committer
+*.db
+*.db-journal
+*.db-wal

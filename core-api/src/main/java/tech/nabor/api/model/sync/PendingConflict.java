@@ -6,8 +6,8 @@ public record PendingConflict(
         int id,
         String tableName,
         String rowId,
-        String fieldName,
-        String localValue,
-        String remoteValue,
+        String fieldName,       // null = whole-record conflict (multiple fields differ)
+        String localValue,      // JSON: client_data from the push conflict response
+        String remoteValue,     // JSON: server_data from the push conflict response
         Instant detectedAt
 ) {}

@@ -12,6 +12,6 @@ public record SyncChange(
         List<String> changedFields,
         Map<String, String> previousValues, // null for INSERT
         Map<String, String> newValues,      // null for DELETE
-        Instant changedAt,
-        Instant syncedAt
+        String baseUpdatedAt,               // server timestamp before local edit
+        Instant changedAt
 ) {}
