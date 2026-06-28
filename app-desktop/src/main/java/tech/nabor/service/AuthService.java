@@ -1,12 +1,14 @@
 package tech.nabor.service;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,7 +36,9 @@ public class AuthService {
     }
 
     public QrChallenge newChallenge() throws IOException {
-        String body = http.post("/auth/sso/qr/generate", "{}");
+        String deviceName = hostname() + " (Java Client)";
+        String reqBody = mapper.writeValueAsString(Map.of("device_name", deviceName));
+        String body = http.post("/auth/sso/qr/generate", reqBody);
         JsonNode root = mapper.readTree(body);
 
         String scanUrl = root.path("scan_url").asText();
@@ -122,6 +126,14 @@ public class AuthService {
         } catch (IOException e) {
             System.err.println("[AuthService] [HTTP Error] Token refresh failed: " + e.getMessage());
             throw e;
+        }
+    }
+
+    private static String hostname() {
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            return System.getProperty("os.name", "unknown");
         }
     }
 

@@ -72,7 +72,8 @@ class NaborApiE2ETest {
 
     @Test @Order(2)
     void ssoQrGenerate_returnsScanUrl() throws Exception {
-        String body = httpClient.post("/auth/sso/qr/generate", "{}");
+        String body = httpClient.post("/auth/sso/qr/generate",
+                "{\"device_name\": \"E2E Test Runner (Java Client)\"}");
         JsonNode root = mapper.readTree(body);
 
         String scanUrl = root.path("scan_url").asText();
@@ -86,7 +87,8 @@ class NaborApiE2ETest {
     @Test @Order(3)
     void ssoQrPoll_pendingQr_returnsPendingStatus() throws Exception {
         // Generate a QR, then immediately poll — should be "pending"
-        String genBody = httpClient.post("/auth/sso/qr/generate", "{}");
+        String genBody = httpClient.post("/auth/sso/qr/generate",
+                "{\"device_name\": \"E2E Test Runner (Java Client)\"}");
         JsonNode genRoot = mapper.readTree(genBody);
         String tokenUuid = extractTokenUuid(genRoot.path("scan_url").asText());
         assumeTrue(tokenUuid != null, "Must extract token UUID from scan_url");
